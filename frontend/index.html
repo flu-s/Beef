@@ -4,15 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HanwooVision - 소고기 등급 판독기</title>
+    <!-- Tailwind CSS (간편 사용을 위해 CDN 유지) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
-        body {
-          font-family: 'Noto Sans KR', sans-serif;
-        }
-        .animate-scan {
-          animation: scan 2s linear infinite;
-        }
+        body { font-family: 'Noto Sans KR', sans-serif; }
+        .animate-scan { animation: scan 2s linear infinite; }
         @keyframes scan {
           0% { top: 0%; opacity: 0; }
           10% { opacity: 1; }
