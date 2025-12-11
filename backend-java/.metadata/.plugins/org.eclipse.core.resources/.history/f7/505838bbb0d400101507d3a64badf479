@@ -1,0 +1,57 @@
+package com.project.beef.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.project.beef.dto.CutDto;
+import com.project.beef.service.CutService;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping("/api/cut") // ⬅️ 404 Not Found 해결을 위한 핵심 매핑
+@RequiredArgsConstructor
+public class CutController {
+
+    private final CutService cutService;
+
+    // 이 메서드는 이제 GET /api/cut/list 경로로 매핑됩니다.
+    // (만약 Thymeleaf/JSP 뷰를 쓴다면 @Controller를 유지해야 합니다. 현재는 JSON/API 사용 가정 하에 @RestController 적용)
+    @GetMapping("/list")
+    public String list(Model model) {
+        model.addAttribute("list", cutService.getList());
+        // REST API 환경이므로, 뷰를 반환하지 않고 데이터를 반환하도록 변경할 수도 있습니다.
+        // 현재는 기존 코드의 구조를 유지합니다.
+        return "cut/list"; 
+    }
+    /**
+     * POST /api/cut/analyze : 고기 이미지 분석 및 결과 반환
+     */
+    @PostMapping("/analyze")
+    public ResponseEntity<?> analyzeCut(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body("업로드할 파일이 없습니다.");
+        }
+
+        try {
+            // ⭐ Mock 데이터를 제거하고 Service 계층의 실제 비즈니스 로직을 호출합니다.
+            CutDto analysisResult = cutService.analyzeAndSaveCut(file);
+            
+            // 분석 결과를 200 OK와 함께 반환
+            return ResponseEntity.ok(analysisResult); 
+            
+        } catch (Exception e) {
+            System.err.println("고기 분석 중 오류 발생: " + e.getMessage());
+            // 파일 처리나 분석 중 오류 발생 시 500 Internal Server Error 반환
+            return ResponseEntity.internalServerError().body("고기 분석 처리 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+}

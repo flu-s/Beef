@@ -1,0 +1,5 @@
+package com.project.beef.repository;
+
+public class MemberRepository {
+
+}

@@ -1,0 +1,41 @@
+package com.project.beef.controller;
+
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.project.beef.service.CutService;
+
+import lombok.RequiredArgsConstructor;
+
+@Controller
+@RequiredArgsConstructor
+public class CutController {
+
+    private final CutService cutService;
+
+    @GetMapping("/cut/list")
+    public String list(Model model) {
+        model.addAttribute("list", cutService.getList());
+        return "cut/list";
+    }
+
+    @PostMapping("/api/cut/analyze")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> analyzeBeef(@RequestParam("file") MultipartFile file) {
+        // 1. 이미지가 비어있는지 확인
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        Map<String, Object> result = cutService.analyzeMeat(file);
+
+        return ResponseEntity.ok(result);
+    }
+}

@@ -1,0 +1,20 @@
+package com.project.beef.dto;
+
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+@Data // Getter, Setter, toString, equals, hashCode 등을 자동으로 생성
+@NoArgsConstructor
+@AllArgsConstructor
+public class CutDto {
+    
+    // 1. JWT 검증 테스트를 위한 임시 필드
+    private String status; // 성공 여부 확인용
+
+    // 2. 실제 분석 결과 (향후 사용)
+    private String detectedPart;
+    private String detectedGrade;
+    private int marblingRatio;
+    private String insight;
+}

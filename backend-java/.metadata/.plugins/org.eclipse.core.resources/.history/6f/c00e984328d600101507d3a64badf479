@@ -1,0 +1,118 @@
+package com.project.beef.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.project.beef.domain.Cut;
+import com.project.beef.dto.CutDto;
+import com.project.beef.dto.SaveRequestDto;
+import com.project.beef.service.CutService;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+
+import java.security.Principal;
+
+@RestController
+@RequestMapping("/api/cut") 
+@RequiredArgsConstructor
+public class CutController {
+
+    private final CutService cutService;
+
+    /**
+     * 1. POST /api/cut/analyze : 부위 측정 및 DB 저장 통합 API (수정됨)
+     * 클라이언트가 보낸 이미지 파일로 부위 분석 후, 그 결과를 DB에 저장합니다.
+     */
+    @PostMapping("/analyze")
+    public ResponseEntity<?> analyzeAndSave(@RequestParam("file") MultipartFile file, Principal principal) {
+        
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body("업로드할 파일이 없습니다.");
+        }
+
+        // 1. 현재 사용자 ID 추출 (가장 중요!)
+        String memberId = null;
+        if (principal != null) {
+            // Spring Security가 인증 성공 시 JWT에서 추출한 사용자 ID를 Principal에 넣어줍니다.
+            memberId = principal.getName(); 
+            System.out.println("DEBUG: 현재 로그인 사용자 ID: " + memberId);
+        } else {
+            // 인증 없이 접근했다면 (혹시 모를 상황 대비)
+            System.err.println("경고: 인증 정보(Principal)가 없어 memberId를 저장할 수 없습니다.");
+        }
+
+        try {
+            // 2. 부위 분석 (AI 서버 통신)
+            CutDto partResult = cutService.analyzePart(file);
+            
+            // 3. SaveRequestDto 생성 및 DB 저장
+            // DTO 생성 시 memberId 포함
+            SaveRequestDto saveDto = SaveRequestDto.builder()
+                .detectedPart(partResult.getDetectedPart() != null ? partResult.getDetectedPart() : "Unknown")
+                .detectedGrade("미측정") 
+                .marblingRatio(0) 
+                .insight(partResult.getInsight() != null ? partResult.getInsight() : "No insight provided")
+                .fileName(file.getOriginalFilename())
+                .memberId(memberId) // 👈 추출한 ID를 DTO에 담습니다.
+                .build();
+                
+            // DB 저장 메서드 호출
+            cutService.saveAnalysisResult(saveDto);
+            System.out.println("✅ 분석 결과 DB 저장 성공: " + saveDto.getDetectedPart() + " by Member: " + saveDto.getMemberId());
+
+            // 4. 최종 분석 결과 DTO를 클라이언트에게 반환
+            // 클라이언트에게 memberId를 포함한 DTO를 반환하여 React 상태 업데이트에 사용될 수 있습니다.
+            partResult.setMemberId(memberId);
+            return ResponseEntity.ok(partResult); 
+            
+        } catch (Exception e) {
+            System.err.println("❌ 분석 및 저장 중 치명적인 오류 발생: " + e.getMessage());
+            e.printStackTrace(); 
+            return ResponseEntity.internalServerError().body("분석 및 저장 처리 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 2. POST /api/cut/grade : 등급 측정 API (기존 로직 유지)
+     */
+    @PostMapping("/grade")
+    public ResponseEntity<?> analyzeGrade(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body("업로드할 파일이 없습니다.");
+        }
+
+        try {
+            CutDto gradeResult = cutService.analyzeGrade(file); 
+            return ResponseEntity.ok(gradeResult); 
+            
+        } catch (Exception e) {
+            System.err.println("등급 분석 중 오류 발생: " + e.getMessage());
+            return ResponseEntity.internalServerError().body("등급 분석 처리 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 3. POST /api/cut/save : 결과 저장 API (기존 로직 유지)
+     * *주의*: 현재 /analyze에서 저장까지 처리하므로 이 API는 사용되지 않을 수 있습니다.
+     */
+    @PostMapping("/save")
+    public ResponseEntity<?> saveResult(@RequestBody SaveRequestDto saveRequest) {
+        try {
+            Cut savedCut = cutService.saveAnalysisResult(saveRequest);
+            
+            // 저장된 결과를 클라이언트에게 반환 (저장된 ID 포함)
+            return ResponseEntity.ok(savedCut.getId()); 
+            
+        } catch (Exception e) {
+            System.err.println("결과 저장 중 오류 발생: " + e.getMessage());
+            return ResponseEntity.internalServerError().body("결과 저장 처리 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+}

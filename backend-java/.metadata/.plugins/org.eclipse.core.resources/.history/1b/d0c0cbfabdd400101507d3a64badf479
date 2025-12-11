@@ -1,0 +1,23 @@
+package com.project.beef.domain;
+
+import lombok.*;
+// import jakarta.persistence.*; // JPA 사용 가정
+
+// @Entity
+@Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class Cut {
+    // @Id
+    // @GeneratedValue(strategy = GenerationType.IDENTITY)
+    // private Long id;
+
+    private String detectedPart;
+    private String detectedGrade;
+    private Integer marblingRatio;
+    private String insight;
+    private String fileName;
+    // ... 나머지 DB 필드
+}

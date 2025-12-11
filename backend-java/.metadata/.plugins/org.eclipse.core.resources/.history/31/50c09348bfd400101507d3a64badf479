@@ -1,0 +1,66 @@
+package com.project.beef.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.project.beef.dto.CutDto;
+import com.project.beef.service.CutService;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping("/api/cut") 
+@RequiredArgsConstructor
+public class CutController {
+
+    private final CutService cutService;
+
+    /**
+     * 1. POST /api/cut/part : 부위 측정 API
+     * 클라이언트가 보낸 이미지 파일을 CutService.analyzePart로 전달합니다.
+     */
+    @PostMapping("/part")
+    public ResponseEntity<?> analyzePart(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body("업로드할 파일이 없습니다.");
+        }
+
+        try {
+            CutDto partResult = cutService.analyzePart(file); 
+            return ResponseEntity.ok(partResult); 
+            
+        } catch (Exception e) {
+            System.err.println("부위 분석 중 오류 발생: " + e.getMessage());
+            // 클라이언트에게 500 오류와 함께 상세 메시지를 전달합니다.
+            return ResponseEntity.internalServerError().body("부위 분석 처리 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 2. POST /api/cut/grade : 등급 측정 API
+     * 클라이언트가 보낸 이미지 파일을 CutService.analyzeGrade로 전달합니다.
+     */
+    @PostMapping("/grade")
+    public ResponseEntity<?> analyzeGrade(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body("업로드할 파일이 없습니다.");
+        }
+
+        try {
+            CutDto gradeResult = cutService.analyzeGrade(file); 
+            return ResponseEntity.ok(gradeResult); 
+            
+        } catch (Exception e) {
+            System.err.println("등급 분석 중 오류 발생: " + e.getMessage());
+            // 클라이언트에게 500 오류와 함께 상세 메시지를 전달합니다.
+            return ResponseEntity.internalServerError().body("등급 분석 처리 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+}

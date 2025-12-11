@@ -1,0 +1,23 @@
+# IDE Files (Eclipse, IntelliJ, VS Code) 
+.metadata 
+.gradle 
+.idea/ 
+*.iml 
+.vscode/ 
+ 
+# Build artifacts 
+/build/ 
+/target/ 
+*.class 
+*.jar 
+*.war 
+*.zip 
+*.log 
+ 
+# Python/Virtual Environment 
+.venv/ 
+venv/ 
+__pycache__/ 
+ 
+# AI Models (already handled by LFS, but good to keep here) 
+*.pt 

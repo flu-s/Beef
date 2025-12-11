@@ -1,0 +1,5 @@
+package com.project.beef.controller;
+
+public class MemberController {
+
+}

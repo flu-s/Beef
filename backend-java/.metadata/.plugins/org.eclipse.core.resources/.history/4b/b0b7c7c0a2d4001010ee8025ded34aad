@@ -1,0 +1,24 @@
+package com.project.beef.controller;
+
+import com.project.beef.domain.Member;
+import com.project.beef.service.MemberService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/member")
+@RequiredArgsConstructor
+public class MemberController {
+
+    private final MemberService memberService;
+
+    // 회원가입 API (React에서 이 주소로 POST 요청을 보냄)
+    @PostMapping("/signup")
+    public ResponseEntity<Long> signup(@RequestBody Member member) {
+        Long memberId = memberService.join(member);
+        return ResponseEntity.ok(memberId);
+    }
+    
+    // 로그인은 JWT 설정 후 이어서 작성하게 됩니다.
+}

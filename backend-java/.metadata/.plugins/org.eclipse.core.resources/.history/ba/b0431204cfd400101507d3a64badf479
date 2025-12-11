@@ -1,0 +1,17 @@
+// src/main/java/com/project/beef/dto/SaveRequestDto.java
+package com.project.beef.dto;
+
+import lombok.Data;
+import org.springframework.web.multipart.MultipartFile; // 파일 메타데이터 저장을 위해 사용 가능
+
+@Data
+public class SaveRequestDto {
+    // CutDto의 필드를 재활용하거나 필요한 필드를 직접 정의합니다.
+    private String detectedPart;
+    private String detectedGrade;
+    private Integer marblingRatio;
+    private String insight;
+    private String fileName;
+    private Long memberId; // 누가 분석했는지 저장할 사용자 ID (선택적)
+    // private String visualizedImageUrl; // 시각화 이미지 URL
+}

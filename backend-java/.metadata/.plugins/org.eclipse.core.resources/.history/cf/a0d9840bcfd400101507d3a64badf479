@@ -1,0 +1,20 @@
+package com.project.beef.dto;
+
+import lombok.AllArgsConstructor; 
+import lombok.Builder;            
+import lombok.Data;
+import lombok.NoArgsConstructor; 
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor 
+@Builder // 👈 이 어노테이션이 있어야 .builder() 메서드를 사용할 수 있습니다.
+public class SaveRequestDto {
+    
+    private String detectedPart;
+    private String detectedGrade;
+    private Integer marblingRatio;
+    private String insight;
+    private String fileName;
+    private String memberId; // 사용자 ID
+}

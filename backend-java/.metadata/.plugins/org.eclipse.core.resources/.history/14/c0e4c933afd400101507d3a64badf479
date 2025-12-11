@@ -1,0 +1,44 @@
+package com.project.beef.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.project.beef.dto.CutDto;
+import com.project.beef.service.CutService;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+
+@Controller
+@RequiredArgsConstructor
+public class CutController {
+
+    private final CutService cutService;
+
+    @GetMapping("/cut/list")
+    public String list(Model model) {
+        model.addAttribute("list", cutService.getList());
+        return "cut/list";
+    }
+
+    @PostMapping("/analyze")
+    public ResponseEntity<?> analyzeCut(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        // 1. (JWT 검증 성공 후 이 로직이 실행됨)
+
+        // 2. 임시 Mock 데이터 반환 (CutDto 사용)
+        CutDto mockResult = new CutDto(
+            "success", // status 필드
+            "등심", 
+            "1++A", 
+            35, 
+            "마블링이 매우 우수한 최고급 등심입니다."
+        );
+        
+        return ResponseEntity.ok(mockResult); // 200 OK와 함께 Mock 데이터 반환
+    }
+}

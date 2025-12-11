@@ -1,0 +1,20 @@
+package com.project.beef.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+// 클라이언트에게 반환할 최종 데이터 구조
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class CutDto {
+    private String status; // 성공("success") 또는 오류("error")
+    private String detectedPart; // 부위
+    private String detectedGrade; // 등급
+    private Integer marblingRatio; // 마블링 지수
+    private String insight; // 분석 요약
+    private String visualizedUrl; // 시각화 이미지 URL (선택적)
+}

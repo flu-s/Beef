@@ -1,0 +1,65 @@
+package com.project.beef.config.jwt;
+
+import java.io.IOException;
+import java.util.Collections;
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.project.beef.util.JwtUtil;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private final JwtUtil jwtUtil;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, 
+                                    HttpServletResponse response, 
+                                    FilterChain filterChain) 
+                                    throws ServletException, IOException {
+        
+        // 1. HTTP 헤더에서 Authorization 값을 가져옵니다.
+        String authorizationHeader = request.getHeader("Authorization");
+
+        // 2. 토큰 유무 및 'Bearer '로 시작하는지 확인합니다.
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            String token = authorizationHeader.substring(7); // 'Bearer ' 제거
+
+            try {
+                // 3. 토큰에서 사용자 이메일(주체)을 추출합니다.
+                String email = jwtUtil.extractEmail(token); // 👈 JwtUtil에 이 메서드 추가 필요!
+
+                // 4. 추출된 이메일로 인증 객체 생성
+                if (email != null) {
+                    // 권한은 임시로 USER로 부여합니다.
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            new User(email, "", Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))),
+                            null,
+                            Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
+                    
+                    // 5. SecurityContext에 인증 정보 저장 (로그인 상태 유지)
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
+            } catch (Exception e) {
+                // 토큰 만료, 잘못된 서명 등 오류 발생 시 처리
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid Token");
+                return;
+            }
+        }
+        
+        // 다음 필터 또는 서블릿으로 요청을 전달
+        filterChain.doFilter(request, response);
+    }
+}

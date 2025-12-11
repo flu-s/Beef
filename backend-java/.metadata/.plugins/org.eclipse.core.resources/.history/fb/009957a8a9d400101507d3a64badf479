@@ -1,0 +1,52 @@
+package com.project.beef.config;
+
+import com.project.beef.config.jwt.JwtAuthenticationFilter; // 👈 필터 Import
+import com.project.beef.util.JwtUtil; // 👈 유틸리티 Import
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+@Configuration
+@EnableWebSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
+    
+    private final JwtUtil jwtUtil; // JwtUtil 주입
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            // 1. CSRF 비활성화 (JWT 사용 시 불필요)
+            .csrf(AbstractHttpConfigurer::disable)
+            
+            // 2. 세션 비활성화 (JWT는 Stateless이므로)
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+            // 3. 요청 권한 설정
+            .authorizeHttpRequests(auth -> auth
+                // 회원가입, 로그인, CORS 요청은 모두 허용 (permitAll)
+                .requestMatchers("/api/member/signup", "/api/member/login").permitAll()
+                .requestMatchers("/api/cut/analyze").hasRole("USER") // 👈 소고기 분석 API는 로그인한 USER만 허용
+                // 그 외 모든 요청은 인증 필요
+                .anyRequest().authenticated() 
+            )
+            
+            // 4. JWT 필터를 UsernamePasswordAuthenticationFilter 이전에 등록
+            .addFilterBefore(new JwtAuthenticationFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+}

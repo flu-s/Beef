@@ -1,0 +1,38 @@
+package com.project.beef.util;
+
+import java.security.Key;
+import java.util.Date;
+
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+
+public class JwtUtil {
+
+    // JWT 서명에 사용할 키 (실제 서비스에서는 보안 강화 필요)
+    private static final Key SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    private static final long EXPIRATION_TIME = 1000 * 60 * 60; // 1시간
+
+    public static String generateToken(String email) {
+        return Jwts.builder()
+                .setSubject(email)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .signWith(SECRET_KEY)
+                .compact();
+    }
+    
+    public String extractEmail(String token) {
+        // 서명을 확인하며 토큰을 파싱하고 Claims(페이로드)를 가져옵니다.
+        Jws<Claims> claimsJws = Jwts.parserBuilder()
+                .setSigningKey(SECRET_KEY)
+                .build()
+                .parseClaimsJws(token);
+                
+        // 만료 시간 및 서명 오류는 파싱 단계에서 자동으로 Exception 발생
+        return claimsJws.getBody().getSubject(); // Subject(이메일) 반환
+    }
+}

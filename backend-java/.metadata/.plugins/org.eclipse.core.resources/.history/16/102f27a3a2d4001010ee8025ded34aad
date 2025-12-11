@@ -1,0 +1,5 @@
+package com.project.beef.dto;
+
+public class LoginResponseDTO {
+
+}

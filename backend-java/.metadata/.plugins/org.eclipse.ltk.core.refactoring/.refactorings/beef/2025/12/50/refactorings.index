@@ -1,0 +1,7 @@
+1765244507391	Rename type 'UserController'
+1765244511070	Rename type 'User'
+1765244515110	Rename type 'UserRepository'
+1765244519155	Rename type 'UserService'
+1765245745903	Move compilation unit
+1765245814371	Rename type 'LoginResponseDTO'
+1765245882239	Rename type 'LoginRequestDTO'

@@ -1,0 +1,20 @@
+spring.application.name=beef
+
+spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
+spring.datasource.url=jdbc:mariadb://192.168.0.173:3306/beef?useSSL=false&allowPublicKeyRetrieval=true&useMysqlMetadata=true
+spring.datasource.username=beef01
+spring.datasource.password=123456
+
+logging.level.org.springframework=info
+logging.level.org.zerock=debug
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.database-platform=org.hibernate.dialect.MariaDBDialect
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.show-sql=true
+
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
+
+# application.properties (또는 application.yml)
+jwt.secret.key=QkY2RkYyODczMzk1NkREREM4RjZGNkY3OTg1NjEzNzY0MzQxMTU4Nzc1MzMxM0MyQTc4MkE4RDc0RkU3QzU5Ng==

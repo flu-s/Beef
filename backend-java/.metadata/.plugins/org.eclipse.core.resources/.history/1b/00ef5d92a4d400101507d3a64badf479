@@ -1,0 +1,5 @@
+package com.project.beef.config.jwt;
+
+public class JwtAuthenticationFilter {
+
+}
