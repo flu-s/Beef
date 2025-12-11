@@ -1,12 +1,19 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Upload, AlertCircle, RefreshCw } from 'lucide-react';
+import { Upload, AlertCircle, RefreshCw, LogIn } from 'lucide-react';
+import { Routes, Route, Link } from 'react-router-dom';
+
 import Navbar from './components/Navbar';
 import RecipeList from './components/RecipeList';
 import ShopList from './components/ShopList';
+import LoginPage from './components/Login';
+import RegisterPage from './components/Register';
+
 import { analyzeBeefImage } from './services/geminiService';
 import type { BeefAnalysisResult, UploadState } from './types';
 
-function App() {
+
+// --- BeefAnalysisApp 컴포넌트: 메인 페이지의 이미지 분석 로직을 담당합니다. ---
+function BeefAnalysisApp() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploadState, setUploadState] = useState<UploadState>('idle');
@@ -17,8 +24,7 @@ function App() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      processFile(selectedFile);
+      processFile(e.target.files[0]);
     }
   };
 
@@ -76,8 +82,6 @@ function App() {
 
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col">
-      <Navbar />
-
       <main className="flex-grow container mx-auto px-4 py-8 max-w-4xl">
 
         {/* State: IDLE - Upload Area */}
@@ -188,9 +192,13 @@ function App() {
                         </div>
 
                         <h2 className="text-stone-500 font-bold uppercase tracking-widest text-sm mb-2">분석 결과</h2>
-                        <h1 className="text-4xl md:text-5xl font-black text-stone-900 mb-6">
-                          {result.cut}
+
+                        {/* ⭐⭐⭐ 수정된 UI 코드: 판정 부위 강조 ⭐⭐⭐ */}
+                        <h1 className="text-4xl md:text-5xl font-black text-stone-900 mb-6 flex items-center gap-3">
+                            <span className="text-stone-700 text-4xl font-black">판정 부위</span>
+                            <span className="text-stone-900 text-5xl md:text-6xl font-black">{result.cut}</span>
                         </h1>
+                        {/* ⭐⭐⭐ 수정 끝 ⭐⭐⭐ */}
 
                         <div className="space-y-4 mb-8">
                           <div className="flex justify-between items-center border-b border-stone-100 pb-3">
@@ -226,6 +234,24 @@ function App() {
       </main>
     </div>
   );
+}
+
+
+// --- App 컴포넌트: 라우팅을 정의하는 최상위 컴포넌트입니다. ---
+function App() {
+    return (
+        <div className="min-h-screen bg-stone-50 flex flex-col">
+            <Navbar />
+
+            <Routes>
+                <Route path="/" element={<BeefAnalysisApp />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+
+                <Route path="*" element={<div className="text-center pt-20 text-xl font-bold">404 Page Not Found</div>} />
+            </Routes>
+        </div>
+    );
 }
 
 export default App;

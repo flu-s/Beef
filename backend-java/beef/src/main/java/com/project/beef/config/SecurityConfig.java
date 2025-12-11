@@ -1,16 +1,12 @@
 package com.project.beef.config;
 
-import com.project.beef.config.jwt.JwtAuthenticationFilter;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder; // 💡 BCrypt import 추가
+import org.springframework.security.crypto.password.PasswordEncoder; // 💡 PasswordEncoder import 추가
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -19,53 +15,60 @@ import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
+    // ----------------------------------------------------
+    // ⭐ 1. [Critical Fix] PasswordEncoder 빈 등록 ⭐
+    // MemberService가 의존성 주입을 받을 수 있도록 BCryptPasswordEncoder를 Bean으로 등록합니다.
+    // ----------------------------------------------------
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(csrf -> csrf.disable()) // REST API이므로 CSRF 비활성화
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // CORS 설정 적용
-            
-            // 세션 대신 JWT 사용: STATELESS 설정
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            
-            .authorizeHttpRequests(auth -> auth
-                // 로그인 및 회원가입 경로는 인증 없이 허용
-                .requestMatchers("/api/member/login", "/api/member/signup").permitAll()
-                
-                // ⭐ /api/cut/analyze 경로는 JWT 인증이 필수입니다. 
-                // 이 설정 때문에 토큰이 유효하지 않으면 403 Forbidden이 발생합니다.
-                .requestMatchers("/api/cut/analyze").authenticated() 
-                
-                // 나머지 모든 요청은 인증 없이 허용 (개발 편의를 위해 설정)
-                .anyRequest().permitAll()
-            )
-            
-            // JWT 필터를 UsernamePasswordAuthenticationFilter 전에 추가
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
-
-    // CORS 설정 (프론트엔드와 통신 허용)
+    
+    // ----------------------------------------------------
+    // ⭐ 2. CorsConfigurationSource 빈 설정 (CORS 허용 규칙 정의) ⭐
+    // ----------------------------------------------------
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:3001")); // React 개발 서버
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(true);
+
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173")); 
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); 
+        configuration.setAllowedHeaders(Arrays.asList("*")); 
+        configuration.setAllowCredentials(true); 
+        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/**", configuration); 
+        
         return source;
+    }
+
+    // ----------------------------------------------------
+    // ⭐ 3. SecurityFilterChain에 CORS 필터 및 인증 무시 경로 설정 ⭐
+    // ----------------------------------------------------
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        
+        // 1. CSRF 비활성화
+        http.csrf(csrf -> csrf.disable());
+            
+        // 2. CORS 설정 적용 (CORS 문제를 해결합니다)
+        http.cors(c -> c.configurationSource(corsConfigurationSource())); 
+            
+        // 3. 권한 설정 (회원가입/로그인 경로는 인증 없이 접근 허용)
+        http.authorizeHttpRequests(authz -> authz
+            // 💡 /auth/register, /auth/login 인증 없이 접근 허용
+            .requestMatchers("/auth/**").permitAll() 
+            // 💡 /api/cut/** 경로 임시 허용
+            .requestMatchers("/api/cut/**").permitAll() 
+            .anyRequest().authenticated() // 나머지 요청은 인증 필요
+        );
+            
+        // 4. formLogin 및 httpBasic 비활성화
+        http.formLogin(formLogin -> formLogin.disable());
+        http.httpBasic(httpBasic -> httpBasic.disable());
+
+        return http.build();
     }
 }

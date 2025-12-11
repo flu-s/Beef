@@ -7,7 +7,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody; 
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import com.project.beef.domain.Member; 
 import com.project.beef.dto.LoginRequestDTO;
@@ -17,22 +19,21 @@ import com.project.beef.service.MemberService;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/member")
+@RequestMapping("/auth") 
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:5173", methods = {RequestMethod.GET, RequestMethod.POST}) // 💡 CORS 설정 추가
 public class MemberController {
 
     private final MemberService memberService;
     private final PasswordEncoder passwordEncoder; 
     private final JwtUtil jwtUtil;
 
-    // 1. 회원가입 API (POST /api/member/signup)
-    @PostMapping("/signup")
+    @PostMapping("/register") 
     public ResponseEntity<Long> signup(@RequestBody Member member) {
         Long memberId = memberService.join(member);
         return ResponseEntity.ok(memberId);
     }
     
-    // 2. 로그인 API (POST /api/member/login)
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO loginRequestDTO) {
         
@@ -46,7 +47,7 @@ public class MemberController {
         }
 
         // 3. 비밀번호 일치 시 JWT 토큰 생성
-        String token = jwtUtil.generateToken(member.getEmail()); // ✅ JwtUtil 사용
+        String token = jwtUtil.generateToken(member.getEmail());
 
         // 4. 토큰과 성공 메시지 반환
         return ResponseEntity.ok(new LoginResponseDTO(token, "로그인 성공"));

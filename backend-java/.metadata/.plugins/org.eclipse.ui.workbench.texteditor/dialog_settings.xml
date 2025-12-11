@@ -4,6 +4,7 @@
 	<section name="java.lang.Class">
 		<item key="replaceBarOpen" value="false"/>
 		<list key="findhistory">
+			<item value="implementation &apos;org.mariadb.jdbc:mariadb-java-client&apos;"/>
 			<item value="CutDto finalResult"/>
 			<item value="CutDto combinedResult = cutService.analyzeAndCombine(file);"/>
 			<item value=".Insight"/>
