@@ -1,17 +1,17 @@
 export interface Recipe {
-  title: string;
-  description: string;
-  cookingTime: string; // e.g., "20분"
-  difficulty: string; // e.g., "쉬움"
+    title: string;
+    description: string;
+    thumbnailUrl: string;
 }
 
-export interface Shop {
-  id: number;
-  name: string;
-  address: string;
-  distance: string;
-  rating: number;
-  isOpen: boolean;
+export interface BeefAnalysisResult {
+    status: 'success' | 'error';
+    detectedPart: string;
+    detectedGrade: string;
+    insight: string;
+    memberId: string | null;
+    isBeef: boolean;
+    recipes: Recipe[];
 }
 
 export interface BeefAnalysisResult {

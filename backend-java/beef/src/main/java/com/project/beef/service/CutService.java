@@ -40,10 +40,10 @@ public class CutService {
         final byte[] fileBytes = file.getBytes();
         final String filename = file.getOriginalFilename();
         
-        // 1. 부위 분석 실행 (수정된 시그니처 사용)
+        // 1. 부위 분석 실행
         CutDto partResult = analyzePart(fileBytes, filename); 
         
-        // 2. 등급 분석 실행 (수정된 시그니처 사용)
+        // 2. 등급 분석 실행
         CutDto gradeResult = analyzeGrade(fileBytes, filename);
         
         // 3. 줄 바꿈을 적용하여 Insight 메시지 결합
@@ -51,7 +51,7 @@ public class CutService {
                                  + "\n" 
                                  + "(등급 분석: " + gradeResult.getInsight() + ")";
         
-        // 4. 최종 CutDto 구성 (마블링 비율은 null로 고정)
+        // 4. 최종 CutDto 구성
         return CutDto.builder()
             .status("success")
             .detectedPart(partResult.getDetectedPart())
@@ -68,7 +68,7 @@ public class CutService {
     public CutDto analyzePart(byte[] fileBytes, String filename) throws Exception {
         
         String url = AI_SERVER_URL + "/analyze/part"; 
-        // 수정된 callAiServer 호출
+        // callAiServer 호출
         Map<String, Object> aiResponse = callAiServer(fileBytes, filename, url); 
 
         return CutDto.builder()
@@ -87,7 +87,7 @@ public class CutService {
     public CutDto analyzeGrade(byte[] fileBytes, String filename) throws Exception {
         
         String url = AI_SERVER_URL + "/analyze/grade"; 
-        // 수정된 callAiServer 호출
+        // callAiServer 호출
         Map<String, Object> aiResponse = callAiServer(fileBytes, filename, url);
 
         return CutDto.builder()
@@ -99,13 +99,12 @@ public class CutService {
             .build();
     }
     
-    // ⭐ callAiServer 시그니처 수정: byte[]와 filename을 받도록 변경 ⭐
+    // ⭐ callAiServer 시그니처 : byte[]와 filename을 받도록 변경 ⭐
     private Map<String, Object> callAiServer(byte[] fileBytes, String filename, String url) throws Exception {
         
         org.springframework.core.io.Resource resource = new ByteArrayResource(fileBytes) {
             @Override
             public String getFilename() {
-                // 전달받은 filename 사용
                 return filename;
             }
         };

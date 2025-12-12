@@ -1,12 +1,17 @@
 package com.project.beef.config.jwt;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
+import org.springframework.http.HttpMethod; 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher; 
+import org.springframework.security.web.util.matcher.RequestMatcher; // RequestMatcher import 추가
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -24,42 +29,59 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
 
+    // ⭐ 1. 필터링을 건너뛸 공용 경로 정의 ⭐
+    // 이 경로들은 토큰 검증 없이 바로 통과됩니다.
+    private static final List<RequestMatcher> PUBLIC_MATCHERS = Arrays.asList(
+            // 로그인, 회원가입 경로 (POST 요청)
+            new AntPathRequestMatcher("/auth/**", HttpMethod.POST.name()),
+            
+            // ⭐⭐⭐ 분석 API 경로 추가 (POST 요청) ⭐⭐⭐
+            new AntPathRequestMatcher("/api/cut/**", HttpMethod.POST.name()),
+            
+            // 모든 OPTIONS 요청 허용 (CORS Preflight)
+            new AntPathRequestMatcher("/**", HttpMethod.OPTIONS.name())
+    );
+
+    /**
+     * PUBLIC_MATCHERS에 정의된 경로에 대해서는 이 필터를 건너뜁니다.
+     * 이는 permitAll() 설정이 적용될 수 있도록 보장합니다.
+     */
     @Override
-    protected void doFilterInternal(HttpServletRequest request, 
-                                    HttpServletResponse response, 
-                                    FilterChain filterChain) 
-                                    throws ServletException, IOException {
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        // 현재 요청이 PUBLIC_MATCHERS 중 하나와 일치하는지 확인합니다.
+        return PUBLIC_MATCHERS.stream().anyMatch(matcher -> matcher.matches(request));
+    }
+    
+    // 이 필터가 처리할 로직 (토큰 검증 및 인증)
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+
+        // shouldNotFilter()에서 공용 경로는 이미 건너뛰었으므로, 여기는 토큰이 필요한 요청만 들어옵니다.
         
-        // 1. HTTP 헤더에서 Authorization 값을 가져옵니다.
         String authorizationHeader = request.getHeader("Authorization");
 
-        // 2. 토큰 유무 및 'Bearer '로 시작하는지 확인합니다.
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             String token = authorizationHeader.substring(7); // 'Bearer ' 제거
 
             try {
-                // 3. 토큰에서 사용자 이메일(주체)을 추출합니다.
-                String email = jwtUtil.extractEmail(token); // 👈 JwtUtil에 이 메서드 추가 필요!
+                String email = jwtUtil.extractEmail(token);
 
-                // 4. 추출된 이메일로 인증 객체 생성
                 if (email != null) {
-                    // 권한은 임시로 USER로 부여합니다.
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             new User(email, "", Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))),
                             null,
                             Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
                     
-                    // 5. SecurityContext에 인증 정보 저장 (로그인 상태 유지)
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             } catch (Exception e) {
-                // 토큰 만료, 잘못된 서명 등 오류 발생 시 처리
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid Token");
+                // 토큰 만료 등 오류 발생 시 401 반환
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid Token or Token Expired");
                 return;
             }
         }
         
-        // 다음 필터 또는 서블릿으로 요청을 전달
         filterChain.doFilter(request, response);
     }
 }

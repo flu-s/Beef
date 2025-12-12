@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChefHat, Clock } from 'lucide-react';
+import { ChefHat, Clock, Youtube, Search } from 'lucide-react';
 import type { Recipe } from '../types';
 
 interface Props {
@@ -7,11 +7,40 @@ interface Props {
   cut: string;
 }
 
+// 레시피 카드의 아이콘과 배경색을 결정하는 함수
+const getLinkInfo = (index: number) => {
+    switch (index % 3) {
+        case 0: // 첫 번째 -> 네이버
+            return {
+                icon: <Search className="h-6 w-6" />,
+                name: '네이버',
+                color: 'text-green-600/70 bg-green-500/10',
+                searchUrl: 'https://search.naver.com/search.naver?query='
+            };
+        case 1: // 두 번째 -> 유튜브
+            return {
+                icon: <Youtube className="h-6 w-6" />,
+                name: '유튜브',
+                color: 'text-red-600/70 bg-red-500/10',
+                searchUrl: 'https://www.youtube.com/results?search_query='
+            };
+        case 2: // 세 번째 -> 구글
+            return {
+                icon: <Search className="h-6 w-6" />,
+                name: '구글',
+                color: 'text-blue-600/70 bg-blue-500/10',
+                searchUrl: 'https://www.google.com/search?q='
+            };
+        default:
+             return { icon: <Search className="h-6 w-6" />, name: '검색', color: 'text-stone-600/70 bg-stone-500/10', searchUrl: 'https://www.google.com/search?q=' };
+    }
+}
+
 const RecipeList: React.FC<Props> = ({ recipes, cut }) => {
-  // 방어 코드: recipes가 undefined이거나 null일 경우 빈 배열로 처리
   const safeRecipes = Array.isArray(recipes) ? recipes : [];
 
   if (safeRecipes.length === 0) {
+    // ... (오류 메시지 부분 생략)
     return (
       <div className="bg-white rounded-3xl p-6 shadow-lg border border-stone-100">
         <div className="flex items-center gap-2 mb-4">
@@ -41,45 +70,42 @@ const RecipeList: React.FC<Props> = ({ recipes, cut }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {safeRecipes.map((recipe, index) => (
-          <a
-            key={index}
-            href={`https://www.youtube.com/results?search_query=소고기+${recipe.title}+만드는법`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group block bg-stone-50 rounded-2xl overflow-hidden border border-stone-200 hover:border-red-300 hover:shadow-md transition-all cursor-pointer"
-          >
-            {/* Thumbnail Placeholder */}
-            <div className="h-32 bg-stone-200 relative overflow-hidden">
-               <img
-                 src={`https://placehold.co/600x400/e7e5e4/a8a29e?text=${recipe.title}`}
-                 alt={recipe.title}
-                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-               />
-               <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                 <Clock className="h-3 w-3" /> {recipe.cookingTime}
-               </div>
-            </div>
+        {safeRecipes.map((recipe, index) => {
+          const info = getLinkInfo(index);
 
-            <div className="p-4">
-              <h4 className="font-bold text-lg text-stone-900 mb-1 group-hover:text-red-600 transition-colors">
-                {recipe.title}
-              </h4>
-              <p className="text-xs text-stone-500 line-clamp-2 mb-3 h-8">
-                {recipe.description}
-              </p>
+          // ⭐⭐⭐ 최종 수정: 검색어를 '소고기 부위 레시피'로 구성 ⭐⭐⭐
+          const searchTerm = `소고기 ${cut} 레시피`;
 
-              <div className="flex justify-between items-center text-xs text-stone-400 border-t border-stone-200 pt-3">
-                 <span className="flex items-center gap-1">
-                   난이도: <span className="text-stone-700 font-medium">{recipe.difficulty}</span>
-                 </span>
-                 <span className="group-hover:translate-x-1 transition-transform text-red-500 font-medium">
-                   레시피 보기 &rarr;
-                 </span>
+          return (
+            <a
+              key={index}
+              href={`${info.searchUrl}${searchTerm}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group block bg-stone-50 rounded-2xl overflow-hidden border border-stone-200 hover:border-red-300 hover:shadow-md transition-all cursor-pointer"
+            >
+
+              {/* 상단 검색 엔진 영역 */}
+              <div className={`h-32 relative overflow-hidden flex flex-col items-center justify-center ${info.color}`}>
+                 <div className="flex items-center gap-2">
+                   {info.icon}
+                   <span className="font-bold text-xl">{info.name}</span>
+                 </div>
               </div>
-            </div>
-          </a>
-        ))}
+
+              {/* 하단 UI: 부위와 검색어만 강조 */}
+              <div className="p-4 flex flex-col items-center justify-center h-20">
+                <h4 className="font-bold text-lg text-stone-900 mb-1 group-hover:text-red-600 transition-colors uppercase">
+                   {/* 부위만 크게 표시 */}
+                   {cut}
+                </h4>
+                <p className="text-sm text-stone-500">
+                   레시피 검색
+                </p>
+              </div>
+            </a>
+          );
+        })}
       </div>
     </div>
   );

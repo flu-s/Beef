@@ -18,7 +18,7 @@ public class JwtUtil {
     // 이 키가 토큰 생성 시와 검증 시 모두 일치해야 합니다!
     private final Key key;
 
-    // 만료 시간 설정 (예: 1시간 = 3600000ms)
+    // 만료 시간 설정 (1시간 = 3600000ms)
     @Value("${jwt.expiration.time:3600000}") 
     private long expirationTime;
 

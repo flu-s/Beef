@@ -1,19 +1,39 @@
-package com.project.beef.config; // 💡 패키지 경로는 실제 프로젝트에 맞게 수정해주세요.
+package com.project.beef.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
+
+import java.util.Arrays;
 
 @Configuration
-public class CorsConfig implements WebMvcConfigurer {
+public class CorsConfig {
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedOrigins("http://localhost:5173")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("*")
-                .allowCredentials(true)
-                .maxAge(3600);
+    /**
+     * Spring Security 필터보다 높은 우선순위로 CORS 필터를 등록하여 
+     * OPTIONS (Preflight) 요청이 보안 필터에 의해 차단되는 것을 방지합니다.
+     */
+    @Bean
+    public CorsFilter corsFilter() {
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration config = new CorsConfiguration();
+        
+        // ⭐ 허용할 출처 (프론트엔드 URL) ⭐
+        config.setAllowCredentials(true); 
+        // 5173과 127.0.0.1:5173 모두 허용
+        config.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://127.0.0.1:5173"));
+        
+        // 모든 헤더 허용 (Authorization 헤더 포함)
+        config.setAllowedHeaders(Arrays.asList("*"));
+        
+        // 허용할 HTTP 메서드 (OPTIONS 포함)
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        
+        // 모든 경로에 CORS 설정 적용
+        source.registerCorsConfiguration("/**", config);
+        
+        return new CorsFilter(source);
     }
 }
