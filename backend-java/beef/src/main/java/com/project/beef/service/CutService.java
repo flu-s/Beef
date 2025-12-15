@@ -56,7 +56,6 @@ public class CutService {
             .status("success")
             .detectedPart(partResult.getDetectedPart())
             .detectedGrade(gradeResult.getDetectedGrade())
-            // ⭐ 부위/등급 확률 값 결합 ⭐
             .partConfidence(partResult.getPartConfidence())
             .gradeConfidence(gradeResult.getGradeConfidence())
             .insight(combinedInsight)
@@ -77,7 +76,6 @@ public class CutService {
             .status("success")
             .detectedPart((String) aiResponse.get("detectedPart"))
             .insight((String) aiResponse.get("insight"))
-            // ⭐ AI 서버의 'confidence' 값을 partConfidence에 매핑 ⭐
             .partConfidence((String) aiResponse.get("confidence")) 
             .detectedGrade(null)
             .gradeConfidence(null) // 사용하지 않는 필드는 null 처리
@@ -98,7 +96,6 @@ public class CutService {
             .status("success")
             .detectedGrade((String) aiResponse.get("detectedGrade"))
             .insight((String) aiResponse.get("insight"))
-            // ⭐ AI 서버의 'confidence' 값을 gradeConfidence에 매핑 ⭐
             .gradeConfidence((String) aiResponse.get("confidence"))
             .detectedPart(null)
             .partConfidence(null) // 사용하지 않는 필드는 null 처리
@@ -108,7 +105,6 @@ public class CutService {
     
     // ⭐ callAiServer는 변경 없음 ⭐
     private Map<String, Object> callAiServer(byte[] fileBytes, String filename, String url) throws Exception {
-        // ... (기존 로직 유지)
         org.springframework.core.io.Resource resource = new ByteArrayResource(fileBytes) {
             @Override
             public String getFilename() {

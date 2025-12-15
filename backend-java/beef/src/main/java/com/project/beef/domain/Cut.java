@@ -1,4 +1,3 @@
-// src/main/java/com/project/beef/domain/Cut.java
 package com.project.beef.domain;
 
 import java.time.LocalDateTime;
@@ -31,7 +30,6 @@ public class Cut {
     // AI 분석 결과를 저장할 필드
     private String detectedPart;
     private String detectedGrade;
-    private Integer marblingRatio;
     private String insight;
     private String fileName;
     private String memberId;

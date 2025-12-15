@@ -11,7 +11,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher; 
-import org.springframework.security.web.util.matcher.RequestMatcher; // RequestMatcher import 추가
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -29,27 +29,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
 
-    // ⭐ 1. 필터링을 건너뛸 공용 경로 정의 ⭐
-    // 이 경로들은 토큰 검증 없이 바로 통과됩니다.
-    private static final List<RequestMatcher> PUBLIC_MATCHERS = Arrays.asList(
+    // ⭐ 1. 토큰 검증 없이 무조건 통과시킬 경로만 정의 (로그인, 회원가입, OPTIONS) ⭐
+    private static final List<RequestMatcher> NO_VERIFICATION_MATCHERS = Arrays.asList(
             // 로그인, 회원가입 경로 (POST 요청)
             new AntPathRequestMatcher("/auth/**", HttpMethod.POST.name()),
-            
-            // ⭐⭐⭐ 분석 API 경로 추가 (POST 요청) ⭐⭐⭐
-            new AntPathRequestMatcher("/api/cut/**", HttpMethod.POST.name()),
             
             // 모든 OPTIONS 요청 허용 (CORS Preflight)
             new AntPathRequestMatcher("/**", HttpMethod.OPTIONS.name())
     );
 
     /**
-     * PUBLIC_MATCHERS에 정의된 경로에 대해서는 이 필터를 건너뜁니다.
-     * 이는 permitAll() 설정이 적용될 수 있도록 보장합니다.
+     * NO_VERIFICATION_MATCHERS에 정의된 경로에 대해서만 필터를 건너뜁니다.
+     * 분석 API(/api/cut/**)는 이제 이 목록에 없어 토큰 검사를 시도합니다.
      */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        // 현재 요청이 PUBLIC_MATCHERS 중 하나와 일치하는지 확인합니다.
-        return PUBLIC_MATCHERS.stream().anyMatch(matcher -> matcher.matches(request));
+        // 현재 요청이 NO_VERIFICATION_MATCHERS 중 하나와 일치하는지 확인합니다.
+        return NO_VERIFICATION_MATCHERS.stream().anyMatch(matcher -> matcher.matches(request));
     }
     
     // 이 필터가 처리할 로직 (토큰 검증 및 인증)
@@ -57,31 +53,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // shouldNotFilter()에서 공용 경로는 이미 건너뛰었으므로, 여기는 토큰이 필요한 요청만 들어옵니다.
-        
         String authorizationHeader = request.getHeader("Authorization");
 
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             String token = authorizationHeader.substring(7); // 'Bearer ' 제거
 
             try {
+                // 1. 토큰 유효성 검증 및 이메일 추출
                 String email = jwtUtil.extractEmail(token);
 
                 if (email != null) {
+                    // 2. 유효한 경우 인증 객체 생성 및 Security Context에 저장
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             new User(email, "", Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))),
                             null,
                             Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
                     
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+                    // 인증에 성공했으므로 다음 필터로 진행
                 }
             } catch (Exception e) {
-                // 토큰 만료 등 오류 발생 시 401 반환
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid Token or Token Expired");
-                return;
+                // 3. 토큰이 있지만 만료 등 오류 발생 시: 
+                // 기존처럼 401 에러를 발생시키지 않고, 
+                // SecurityContext에 아무것도 설정하지 않은 채 다음 필터로 넘깁니다.
+                // 이 경우 비로그인 상태(ANONYMOUS)로 처리됩니다.
+                System.out.println("토큰 검증 실패: " + e.getMessage());
             }
         }
         
+        // 토큰이 없거나, 토큰이 있어도 유효하지 않은 경우 (catch 블록을 탄 경우 포함),
+        // SecurityContext에 인증 정보가 설정되지 않은 채 다음 필터로 요청을 넘깁니다.
+        // 이 요청은 Spring Security에 의해 "비로그인 (ANONYMOUS)" 상태로 간주됩니다.
         filterChain.doFilter(request, response);
     }
 }

@@ -46,7 +46,6 @@ public class SecurityConfig {
                     
                     // ⭐⭐⭐ 수정할 부분: 컨트롤러와 경로 일치 ⭐⭐⭐
                     // 로그인 및 회원가입 경로를 permitAll()로 허용
-                    // 기존: .requestMatchers("/api/member/login", "/api/member/signup").permitAll()
                     .requestMatchers("/auth/login", "/auth/register").permitAll()
                     
                     // /api/cut/**도 permitAll()로 설정 (분석 API 허용)

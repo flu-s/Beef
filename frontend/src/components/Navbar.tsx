@@ -1,7 +1,4 @@
-// src/components/Navbar.tsx
-
 import React, { useState, useEffect } from 'react';
-// ⭐ Beef 아이콘을 추가합니다. ⭐
 import { LogIn, LogOut, Beef } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 const ExpirationTimer = () => {
   const { tokenExpiration, isLoggedIn, logout } = useAuth();
   const [timeLeft, setTimeLeft] = useState('');
+  const navigate = useNavigate(); // ⭐ navigate 훅 추가
 
   useEffect(() => {
     if (!isLoggedIn || !tokenExpiration) {
@@ -26,6 +24,7 @@ const ExpirationTimer = () => {
         setTimeLeft('만료됨');
         // 세션 만료 시 자동 로그아웃 실행
         logout();
+        navigate('/'); // ⭐ 자동 로그아웃 후 홈으로 이동
         return;
       }
 
@@ -43,7 +42,7 @@ const ExpirationTimer = () => {
     const timer = setInterval(calculateTimeLeft, 1000); // 1초마다 업데이트
 
     return () => clearInterval(timer);
-  }, [tokenExpiration, isLoggedIn, logout]);
+  }, [tokenExpiration, isLoggedIn, logout, navigate]); // ⭐ 의존성 배열에 navigate 추가
 
   // 로그인 상태가 아니거나 시간이 만료된 경우 표시하지 않음
   if (!isLoggedIn || !timeLeft || timeLeft === '만료됨') return null;
@@ -72,7 +71,7 @@ function Navbar() {
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-sm shadow-sm">
       <div className="container mx-auto px-4 py-3 max-w-7xl flex justify-between items-center">
 
-        {/* ⭐⭐⭐ 로고 복구: Beef 아이콘 사용 ⭐⭐⭐ */}
+        {/* ⭐ 로고: Link to="/" 설정 유지 (정상 작동 확인) ⭐ */}
         <Link to="/" className="flex items-center">
             <div className="bg-red-600 p-1.5 rounded-lg mr-2">
                 <Beef className="h-6 w-6 text-white" />
@@ -81,10 +80,10 @@ function Navbar() {
                 Hanwoo<span className="text-red-600">Vision</span>
             </span>
         </Link>
-        {/* ⭐⭐⭐ 로고 복구 끝 ⭐⭐⭐ */}
+        {/* ⭐ 로고 끝 ⭐ */}
 
         <div className="flex items-center">
-            {/* ⭐ 타이머 렌더링 위치 ⭐ */}
+            {/* 타이머 렌더링 위치 */}
             {isLoggedIn && <ExpirationTimer />}
 
             {isLoggedIn ? (

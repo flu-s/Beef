@@ -1,8 +1,6 @@
-// src/App.tsx (최종 V4: 분석 결과 텍스트 크기 축소)
-
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Upload, AlertCircle, RefreshCw, LogIn, LogOut } from 'lucide-react';
-import { Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route, Link, useLocation } from 'react-router-dom'; // ⭐ useLocation 임포트 추가
 
 import Navbar from './components/Navbar';
 import RecipeList from './components/RecipeList';
@@ -27,6 +25,7 @@ function BeefAnalysisApp() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { isLoggedIn } = useAuth();
+  const location = useLocation(); // ⭐ 1. useLocation 훅 사용
 
   const getKoreanCutName = (englishCut: string): string => {
     switch (englishCut.toLowerCase()) {
@@ -144,6 +143,16 @@ function BeefAnalysisApp() {
     setErrorMsg('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  // ⭐ 2. 로고 재클릭 시 상태 초기화 로직 추가 ⭐
+  useEffect(() => {
+    // location.key가 변경될 때 (즉, 현재 경로('/')를 다시 클릭했을 때) 실행됩니다.
+    if (location.pathname === '/' && uploadState !== 'idle') {
+        resetApp();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]); // 의존성 배열에 location.key를 넣어 동일 경로 재클릭을 감지합니다.
+  // ⭐ 로직 추가 끝 ⭐
 
   const renderGradeBadge = (grade: string) => {
     const isPremium = grade.includes('++') || grade.includes('+');

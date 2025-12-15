@@ -13,7 +13,6 @@ public class SaveRequestDto {
     
     private String detectedPart;
     private String detectedGrade;
-    private Integer marblingRatio;
     private String insight;
     private String fileName;
     private String memberId;
