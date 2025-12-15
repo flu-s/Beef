@@ -25,7 +25,6 @@ INDEX VERSION 1.134+C:\Python_workspace\Beef\backend-java\.metadata\.plugins\org
 1682149703.index
 3457250152.index
 2231624022.index
-1487517723.index
 2975414483.index
 2442098811.index
 3948674184.index

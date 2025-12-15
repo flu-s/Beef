@@ -5,21 +5,23 @@ export interface Recipe {
 }
 
 export interface BeefAnalysisResult {
+    // 1. 서버 기본 응답 필드
     status: 'success' | 'error';
-    detectedPart: string;
-    detectedGrade: string;
     insight: string;
     memberId: string | null;
     isBeef: boolean;
+
+    detectedPart: string;
+    detectedGrade: string;
+
+    partConfidence: string;
+    gradeConfidence: string;
+
+    cut: string;
+    grade: string;
+
     recipes: Recipe[];
 }
 
-export interface BeefAnalysisResult {
-  isBeef: boolean;
-  grade: string; // e.g., "1++", "1+", "1", "2", "3"
-  cut: string; // e.g., "Ribeye", "Sirloin"
-  recipes: Recipe[];
-  // Removed detailed scores and descriptions as requested
-}
 
 export type UploadState = 'idle' | 'analyzing' | 'result' | 'error';

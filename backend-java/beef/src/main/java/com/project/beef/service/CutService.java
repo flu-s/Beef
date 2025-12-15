@@ -31,8 +31,8 @@ public class CutService {
     private static final String AI_SERVER_URL = "http://localhost:5000";
 
 
-    // ----------------------------------------------------
-    // ⭐ 3. 부위 및 등급 분석을 순차적으로 실행하고 결과를 결합하는 핵심 메서드 ⭐
+ // ----------------------------------------------------
+    // ⭐ 3. 부위 및 등급 분석을 순차적으로 실행하고 결과를 결합하는 핵심 메서드 (수정됨) ⭐
     // ----------------------------------------------------
     public CutDto analyzeAndCombine(MultipartFile file) throws Exception {
         
@@ -40,10 +40,10 @@ public class CutService {
         final byte[] fileBytes = file.getBytes();
         final String filename = file.getOriginalFilename();
         
-        // 1. 부위 분석 실행
+        // 1. 부위 분석 실행 (partResult에 partConfidence가 담겨서 돌아옴)
         CutDto partResult = analyzePart(fileBytes, filename); 
         
-        // 2. 등급 분석 실행
+        // 2. 등급 분석 실행 (gradeResult에 gradeConfidence가 담겨서 돌아옴)
         CutDto gradeResult = analyzeGrade(fileBytes, filename);
         
         // 3. 줄 바꿈을 적용하여 Insight 메시지 결합
@@ -51,19 +51,21 @@ public class CutService {
                                  + "\n" 
                                  + "(등급 분석: " + gradeResult.getInsight() + ")";
         
-        // 4. 최종 CutDto 구성
+        // 4. 최종 CutDto 구성 (⭐확률 값 추가⭐)
         return CutDto.builder()
             .status("success")
             .detectedPart(partResult.getDetectedPart())
             .detectedGrade(gradeResult.getDetectedGrade())
+            // ⭐ 부위/등급 확률 값 결합 ⭐
+            .partConfidence(partResult.getPartConfidence())
+            .gradeConfidence(gradeResult.getGradeConfidence())
             .insight(combinedInsight)
             .memberId(null) 
             .build();
     }
 
     /**
-     * 1. 부위 측정 서비스 로직: AI 서버의 부위 분석 엔드포인트를 호출합니다.
-     * 시그니처 변경: MultipartFile 대신 byte[]와 filename을 받습니다.
+     * 1. 부위 측정 서비스 로직: AI 서버의 부위 분석 엔드포인트를 호출합니다. (수정됨)
      */
     public CutDto analyzePart(byte[] fileBytes, String filename) throws Exception {
         
@@ -75,14 +77,16 @@ public class CutService {
             .status("success")
             .detectedPart((String) aiResponse.get("detectedPart"))
             .insight((String) aiResponse.get("insight"))
+            // ⭐ AI 서버의 'confidence' 값을 partConfidence에 매핑 ⭐
+            .partConfidence((String) aiResponse.get("confidence")) 
             .detectedGrade(null)
+            .gradeConfidence(null) // 사용하지 않는 필드는 null 처리
             .memberId(null)
             .build();
     }
 
     /**
-     * 2. 등급 측정 서비스 로직: AI 서버의 등급 분석 엔드포인트를 호출합니다.
-     * 시그니처 변경: MultipartFile 대신 byte[]와 filename을 받습니다.
+     * 2. 등급 측정 서비스 로직: AI 서버의 등급 분석 엔드포인트를 호출합니다. (수정됨)
      */
     public CutDto analyzeGrade(byte[] fileBytes, String filename) throws Exception {
         
@@ -94,14 +98,17 @@ public class CutService {
             .status("success")
             .detectedGrade((String) aiResponse.get("detectedGrade"))
             .insight((String) aiResponse.get("insight"))
+            // ⭐ AI 서버의 'confidence' 값을 gradeConfidence에 매핑 ⭐
+            .gradeConfidence((String) aiResponse.get("confidence"))
             .detectedPart(null)
+            .partConfidence(null) // 사용하지 않는 필드는 null 처리
             .memberId(null)
             .build();
     }
     
-    // ⭐ callAiServer 시그니처 : byte[]와 filename을 받도록 변경 ⭐
+    // ⭐ callAiServer는 변경 없음 ⭐
     private Map<String, Object> callAiServer(byte[] fileBytes, String filename, String url) throws Exception {
-        
+        // ... (기존 로직 유지)
         org.springframework.core.io.Resource resource = new ByteArrayResource(fileBytes) {
             @Override
             public String getFilename() {

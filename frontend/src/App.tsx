@@ -1,3 +1,5 @@
+// src/App.tsx (최종 V4: 분석 결과 텍스트 크기 축소)
+
 import React, { useState, useCallback, useRef } from 'react';
 import { Upload, AlertCircle, RefreshCw, LogIn, LogOut } from 'lucide-react';
 import { Routes, Route, Link } from 'react-router-dom';
@@ -9,14 +11,12 @@ import LoginPage from './components/Login';
 import RegisterPage from './components/Register';
 
 import { analyzeBeefImage } from './services/geminiService';
-// Recipe 타입이 types.ts에 정의되어 있어야 합니다.
+
 import type { BeefAnalysisResult, UploadState, Recipe } from './types';
 
-// Auth Context import
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 
-// --- BeefAnalysisApp 컴포넌트: 메인 페이지의 이미지 분석 로직을 담당합니다. ---
 function BeefAnalysisApp() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -26,7 +26,25 @@ function BeefAnalysisApp() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { isLoggedIn } = useAuth(); // 로그인 상태 확인용
+  const { isLoggedIn } = useAuth();
+
+  const getKoreanCutName = (englishCut: string): string => {
+    switch (englishCut.toLowerCase()) {
+      case 'chuck':
+        return '목심 & 윗등심';
+      case 'fillet':
+        return '안심';
+      case 'round':
+        return '우둔살 & 설도';
+      case 'flank':
+        return '치맛살 & 양지';
+      case 'striploin':
+        return '채끝살';
+      default:
+        return '판정 불가';
+    }
+  };
+  // --------------------------------------------------------
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -35,7 +53,6 @@ function BeefAnalysisApp() {
   };
 
   const processFile = async (selectedFile: File) => {
-    // Validate
     if (!selectedFile.type.startsWith('image/')) {
       setErrorMsg('이미지 파일만 업로드해주세요.');
       setUploadState('error');
@@ -45,13 +62,12 @@ function BeefAnalysisApp() {
     // 1. JWT 토큰을 localStorage에서 안전하게 가져오기 (Access to storage 에러 방지)
     let tokenToUse: string | null = null;
     try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('jwtToken');
         tokenToUse = token || null;
     } catch (e) {
         console.warn("경고: localStorage 접근이 차단되었습니다. 비회원 분석으로 진행합니다.", e);
         tokenToUse = null;
     }
-
 
     setFile(selectedFile);
     setPreview(URL.createObjectURL(selectedFile));
@@ -59,18 +75,18 @@ function BeefAnalysisApp() {
     setErrorMsg('');
 
     try {
-      // 2. 분석 API 호출
       const analysis = await analyzeBeefImage(selectedFile, tokenToUse);
 
-      // ⭐ CRITICAL FIX: 백엔드 필드를 프론트엔드 필드로 매핑 ⭐
-      const baseResult = {
+      const baseResult: BeefAnalysisResult = {
           ...analysis,
           grade: analysis.detectedGrade,
           cut: analysis.detectedPart,
-          isBeef: true as boolean,
+          isBeef: analysis.isBeef || true,
+          partConfidence: analysis.partConfidence || 'N/A',
+          gradeConfidence: analysis.gradeConfidence || 'N/A',
+          recipes: analysis.recipes || [],
       };
 
-      // 3. 레시피 데이터 보장
       const recipesFromAnalysis = baseResult.recipes || [];
 
       const minimumRecipes: Recipe[] = [
@@ -83,13 +99,12 @@ function BeefAnalysisApp() {
                            ? recipesFromAnalysis
                            : minimumRecipes;
 
-      // 최종 결과 객체 생성
       const finalResult: BeefAnalysisResult = {
          ...baseResult,
          recipes: recipesToUse,
       };
 
-      // 4. 상태 업데이트
+      // 5. 상태 업데이트
       setResult(finalResult);
       setUploadState('result');
 
@@ -97,7 +112,6 @@ function BeefAnalysisApp() {
       console.error("분석 로직 최종 처리 오류:", err);
       setUploadState('error');
 
-      // 오류 메시지 분리하여 표시
       const errorObject = err as Error;
 
       let errorMessage = '분석 중 알 수 없는 오류가 발생했습니다. 다시 시도해주세요.';
@@ -132,7 +146,6 @@ function BeefAnalysisApp() {
   };
 
   const renderGradeBadge = (grade: string) => {
-    // grade가 이제 undefined가 아닙니다.
     const isPremium = grade.includes('++') || grade.includes('+');
     return (
       <div className={`
@@ -155,12 +168,12 @@ function BeefAnalysisApp() {
               <h1 className="text-4xl md:text-6xl font-black text-stone-900 tracking-tight">
                 내 소고기의 <br className="md:hidden"/>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-red-800">
-                  진짜 등급
+                  부위와 등급
                 </span>을 확인하세요
               </h1>
               <p className="text-lg text-stone-600">
                 AI 모델이 고기의 단면을 분석하여<br className="hidden md:inline"/>
-                정확한 등급과 부위를 판별해 드립니다.
+                등급과 부위를 판별해 드립니다.
               </p>
             </div>
 
@@ -244,7 +257,6 @@ function BeefAnalysisApp() {
                       <div className="relative aspect-square md:aspect-auto">
                         <img src={preview!} alt="Result" className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent md:hidden"></div>
-                        {/* 모바일 뱃지 제거 (요청 반영) */}
                       </div>
 
                       <div className="p-8 flex flex-col justify-center">
@@ -253,14 +265,30 @@ function BeefAnalysisApp() {
 
                         <div className="space-y-4 mb-8">
 
+                          {/* 판정 부위 */}
                           <div className="flex justify-between items-center border-b border-stone-100 pb-3">
                             <span className="text-stone-500 text-lg">판정 부위</span>
-                            <span className="text-2xl font-bold text-stone-900">{result.cut}</span>
+                            <div className="flex flex-col items-end">
+                                {/* ⭐⭐⭐ 수정됨: text-2xl -> text-xl ⭐⭐⭐ */}
+                                <span className="text-xl font-bold text-stone-900">
+                                    {result.cut} ({getKoreanCutName(result.cut)})
+                                </span>
+                                <span className="text-lg text-red-500 font-semibold mt-1">
+                                    (확률: {result.partConfidence})
+                                </span>
+                            </div>
                           </div>
 
+                          {/* 판정 등급 */}
                           <div className="flex justify-between items-center border-b border-stone-100 pb-3">
                             <span className="text-stone-500 text-lg">판정 등급</span>
-                            <span className="text-2xl font-bold text-stone-900">{result.grade} 등급</span>
+                             <div className="flex flex-col items-end">
+                                {/* ⭐⭐⭐ 수정됨: text-2xl -> text-xl ⭐⭐⭐ */}
+                                <span className="text-xl font-bold text-stone-900">{result.grade} 등급</span>
+                                <span className="text-lg text-red-500 font-semibold mt-1">
+                                    (확률: {result.gradeConfidence})
+                                </span>
+                            </div>
                           </div>
 
                         </div>
