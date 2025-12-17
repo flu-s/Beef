@@ -23,5 +23,19 @@ export interface BeefAnalysisResult {
     recipes: Recipe[];
 }
 
+export interface ButcherShop {
+  id: number;
+  name: string;
+  address: string;
+  phone?: string;
+  distance: string;
+  rating?: number;
+  isOpen?: boolean;
+  lat: number;
+  lng: number;
+  mapUrl: string;
+}
+
+
 
 export type UploadState = 'idle' | 'analyzing' | 'result' | 'error';

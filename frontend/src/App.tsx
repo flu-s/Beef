@@ -1,14 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Upload, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 
 import Navbar from './components/Navbar';
 import RecipeList from './components/RecipeList';
-import ShopList from './components/ShopList';
+import ShopSection from './components/ShopSection'; // 분리된 컴포넌트
 import LoginPage from './components/Login';
 import RegisterPage from './components/Register';
-
 import { AuthProvider } from './contexts/AuthContext';
+import type { ButcherShop } from './types';
 
 // --- API 서비스 함수 ---
 const analyzeMeatImage = async (file: File, type: 'beef' | 'chicken', token: string | null) => {
@@ -41,14 +41,14 @@ function BeefAnalysisApp() {
     if (!name || name === '-' || name === 'N/A') return '판정 불가';
     const lowerName = name.toLowerCase().trim();
     const mapping: any = {
-      'leg': '닭다리', 'wing': '닭날개', 'breast': '닭가슴살', 'thigh': '넓적다리', 'drumstick': '닭다리',
-      'chuck': '목심', 'fillet': '안심', 'round': '우둔살', 'flank': '양지', 'striploin': '채끝', 'rib': '갈비'
+      leg: '닭다리', wing: '닭날개', breast: '닭가슴살', thigh: '넓적다리',
+      drumstick: '닭다리', chuck: '목심', fillet: '안심', round: '우둔살',
+      flank: '양지', striploin: '채끝', rib: '갈비'
     };
     return mapping[lowerName] || name;
   };
 
   const processFile = async (selectedFile: File) => {
-    // 파일 타입 검증 (이미지 파일인지 확인)
     if (!selectedFile.type.startsWith('image/')) {
       alert("이미지 파일(JPG, PNG)만 업로드 가능합니다.");
       return;
@@ -81,6 +81,7 @@ function BeefAnalysisApp() {
     setUploadState('idle');
     setResult(null);
     setPreview(null);
+    setErrorMsg('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -88,9 +89,18 @@ function BeefAnalysisApp() {
     if (location.pathname === '/' && uploadState !== 'idle') resetApp();
   }, [location.key]);
 
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processFile(e.dataTransfer.files[0]);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col">
       <main className="flex-grow container mx-auto px-4 py-8 max-w-4xl">
+        {/* IDLE 상태 */}
         {uploadState === 'idle' && (
           <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 animate-fade-in">
             <div className="text-center space-y-4">
@@ -102,27 +112,27 @@ function BeefAnalysisApp() {
                 <button onClick={() => setMeatType('chicken')} className={`px-8 py-3 rounded-2xl font-bold transition-all ${meatType === 'chicken' ? 'bg-orange-500 text-white shadow-lg scale-105' : 'bg-white text-stone-400 border'}`}>🐔 닭고기</button>
               </div>
             </div>
+
             <div
               className={`w-full max-w-xl h-64 border-2 border-dashed rounded-3xl bg-white flex flex-col items-center justify-center cursor-pointer transition-all ${meatType === 'beef' ? 'hover:border-red-500' : 'hover:border-orange-500'}`}
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="h-10 w-10 text-stone-300 mb-4" />
               <p className="text-lg font-bold text-stone-700">{meatType === 'beef' ? '소고기' : '닭고기'} 사진 선택</p>
-
-              {/* ⭐ 사용자가 볼 수 있는 안내 문구 추가 ⭐ */}
               <p className="text-sm text-stone-400 mt-2 font-medium">※ JPG, JPEG, PNG, WEBP 파일만 넣어주세요</p>
 
               <input
                 type="file"
                 ref={fileInputRef}
                 className="hidden"
-                accept=".jpg, .jpeg, .png" // ⭐ 파일 선택창에서 해당 확장자만 보이게 제한 ⭐
+                accept=".jpg, .jpeg, .png"
                 onChange={(e) => e.target.files && processFile(e.target.files[0])}
               />
             </div>
           </div>
         )}
 
+        {/* ANALYZING 상태 */}
         {uploadState === 'analyzing' && preview && (
           <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
             <div className="relative w-64 h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-stone-900">
@@ -133,6 +143,7 @@ function BeefAnalysisApp() {
           </div>
         )}
 
+        {/* RESULT 상태 */}
         {uploadState === 'result' && result && (
           <div className="animate-fade-in-up space-y-8">
             <div className="bg-white rounded-3xl shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-2 border border-stone-200">
@@ -148,9 +159,7 @@ function BeefAnalysisApp() {
                     <span className="text-stone-500">판정 부위</span>
                     <div className="text-right">
                       <p className="text-xl font-bold">{getKoreanName(result.detectedPart || result.detectedChickenPart, meatType)}</p>
-                      <p className={`text-sm font-semibold ${meatType === 'beef' ? 'text-red-500' : 'text-orange-500'}`}>
-                        {result.displayPartConf}
-                      </p>
+                      <p className={`text-sm font-semibold ${meatType === 'beef' ? 'text-red-500' : 'text-orange-500'}`}>{result.displayPartConf}</p>
                     </div>
                   </div>
                   {meatType === 'beef' && (
@@ -168,15 +177,15 @@ function BeefAnalysisApp() {
                 </button>
               </div>
             </div>
-            <RecipeList
-              recipes={result.recipes || []}
-              cut={getKoreanName(result.detectedPart || result.detectedChickenPart, meatType)}
-              meatType={meatType}
-            />
-            <ShopList />
+
+            <RecipeList recipes={result.recipes || []} cut={getKoreanName(result.detectedPart || result.detectedChickenPart, meatType)} meatType={meatType} />
+
+            {/* 분리된 지도 및 정육점 컴포넌트 */}
+            <ShopSection />
           </div>
         )}
 
+        {/* ERROR 상태 */}
         {uploadState === 'error' && (
           <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-6">
             <AlertCircle className="h-16 w-16 text-red-600" />

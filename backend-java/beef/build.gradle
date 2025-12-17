@@ -63,21 +63,25 @@ dependencies {
     annotationProcessor(
             "jakarta.persistence:jakarta.persistence-api",
             "jakarta.annotation:jakarta.annotation-api",
-            "com.querydsl:querydsl-apt:${queryDslVersion}:jakarta")
-            
+            "com.querydsl:querydsl-apt:${queryDslVersion}:jakarta"
+            // ** Lombok보다 QueryDSL이 먼저 처리되도록 순서 설정 **
+
+    )
+    annotationProcessor 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
+
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-    
-   implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.0'
-   
-   // Spring Security (로그인 및 비밀번호 암호화 기능)
+
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.0'
+
+    // Spring Security (로그인 및 비밀번호 암호화 기능)
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    
+
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
-    
-}
 
+}
 def querydslDir = "$buildDir/generated/querydsl"
 
 sourceSets {
@@ -88,22 +92,17 @@ sourceSets {
     }
 }
 
-tasks.register("generateQuerydsl", JavaCompile) {
-    group = "build"
-    description = "Generate QueryDSL Q-types"
-    source = sourceSets.main.java
-    classpath = configurations.annotationProcessor
-    destinationDirectory = file(querydslDir)
-    options.annotationProcessorPath = configurations.annotationProcessor
-    options.compilerArgs = [
-        "-proc:only",
-        "-processor", "com.querydsl.apt.jpa.JPAAnnotationProcessor"
-    ]
+// clean 태스크 실행 시 generated Q-Class 디렉토리를 삭제하도록 합니다.
+tasks.named('clean') {
+    delete file(querydslDir)
 }
 
-tasks.named("compileJava") {
-    dependsOn tasks.named("generateQuerydsl")
+// 컴파일 시점에 QueryDSL Q-Class 생성이 먼저 되도록 의존성 설정
+// 이 설정이 이전 코드보다 훨씬 안정적입니다.
+tasks.withType(JavaCompile).configureEach {
+    options.generatedSourceOutputDirectory.set(file(querydslDir))
 }
+
 
 /* 쿼리 dsl 사용법 -> 오른쪽에 있는 Gradle 메뉴를 열고 task-> other를 찾아서 complieJava 실행*/
 /* 하단에 complie가 된다.
