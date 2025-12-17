@@ -1,173 +1,114 @@
 import os
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from ultralytics import YOLO
 from werkzeug.utils import secure_filename
-import json
 
 app = Flask(__name__)
+CORS(app)
 
-# --- 설정 ---
-PART_MODEL_PATH = 'C:/Python_workspace/beef/ai-server/weight/best_part.pt'
-GRADE_MODEL_PATH = 'C:/Python_workspace/beef/ai-server/weight/best_grade.pt'
+# --- [1] 모델 경로 설정 ---
+MODEL_PATHS = {
+    "beef_part": "C:/Python_workspace/Beef/ai-server/weight/beef_part.pt",
+    "beef_grade": "C:/Python_workspace/Beef/ai-server/weight/beef_grade.pt",
+    "chicken_part": "C:/Python_workspace/Beef/ai-server/weight/chicken_part.pt"
+}
 
-# 파일 업로드를 위한 임시 폴더 설정
 UPLOAD_FOLDER = 'temp_uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# --- 모델 로드 ---
+# 모델 로드
+LOADED_MODELS = {}
 try:
-    PART_MODEL = YOLO(PART_MODEL_PATH)
-    GRADE_MODEL = YOLO(GRADE_MODEL_PATH)
-    print("AI 모델이 성공적으로 로드되었습니다.")
-except Exception as e:
-    print(f"AI 모델 로드 실패: {e}")
-    exit()
-
-
-# --- 유틸리티 함수 (확률 반환 추가) ---
-
-def parse_results(results, model_type, names_map=None):
-    """
-    YOLOv8 분석 결과를 파싱하고, detected_item과 함께 확률(max_conf)을 반환합니다.
-    :return: (detected_item, insight, max_conf)
-    """
-
-    detected_item = "판정 불가"
-    insight = "감지된 정보가 명확하지 않습니다."
-    max_conf = 0.0  # ⭐ 확률 값 초기화 및 반환값에 추가 ⭐
-
-    if not results:
-        return detected_item, insight, max_conf
-
-    # --- 1. 부위 탐지 모델 (Detection) 로직 ---
-    if model_type == 'part':
-        if results[0].boxes:
-            names = results[0].names
-            classes = results[0].boxes.cls.tolist()
-            confidences = results[0].boxes.conf.tolist()
-
-            # 최대 확률 및 항목 찾기
-            temp_conf = 0.0
-            for cls, conf in zip(classes, confidences):
-                if conf > temp_conf:
-                    temp_conf = conf
-                    detected_item = names.get(int(cls), "알 수 없음")
-
-            max_conf = temp_conf  # ⭐ 찾은 최대 확률 저장 ⭐
-
-            if detected_item != "알 수 없음":
-                insight = f"부위 판정 {detected_item}가 {max_conf:.2f}의 확률로 감지되었습니다."
-
-    # --- 2. 등급 분류 모델 (Classification) 로직 (1++ 시작 반영) ---
-    elif model_type == 'grade':
-        if results and results[0].probs:
-            probs = results[0].probs
-            top_index = int(probs.top1)
-            max_conf = probs.top1conf.item()  # ⭐ 확률 값 저장 ⭐
-
-            if names_map and top_index in names_map:
-                detected_item = names_map[top_index]
-            else:
-                detected_item = str(top_index)
-
-            insight = f"등급 판정 {detected_item}이 {max_conf:.2f} 확률로 감지되었습니다."
+    for name, path in MODEL_PATHS.items():
+        if os.path.exists(path):
+            LOADED_MODELS[name] = YOLO(path)
+            print(f"✅ {name} 로드 성공")
         else:
-            insight = "등급 분류 결과를 찾을 수 없습니다."
-            max_conf = 0.0
-
-    # ⭐ max_conf를 포함하여 3개의 값 반환 ⭐
-    return detected_item, insight, max_conf
+            print(f"❌ 파일 없음: {path}")
+except Exception as e:
+    print(f"❌ 모델 로드 중 에러: {e}")
 
 
-# --- 엔드포인트: 부위 분석 (JSON 응답 수정) ---
+# --- [2] 결과 처리 유틸리티 ---
+def parse_yolo(results, is_classification=False):
+    label, conf = "N/A", 0.0
+    if not results or len(results) == 0:
+        return label, conf
 
-@app.route('/analyze/part', methods=['POST'])
-def analyze_part():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
+    if is_classification:  # 등급 모델 (Classification)
+        if hasattr(results[0], 'probs') and results[0].probs is not None:
+            top_idx = int(results[0].probs.top1)
+            conf = float(results[0].probs.top1conf.item())
+            label = results[0].names[top_idx]
+    else:  # 부위 모델 (Detection)
+        if results[0].boxes is not None and len(results[0].boxes) > 0:
+            box = results[0].boxes[0]
+            label = results[0].names[int(box.cls[0])]
+            conf = float(box.conf[0])
+    return label, conf
 
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
 
-    filepath = None
+# --- [3] 소고기 통합 분석 API (부위 + 등급) ---
+@app.route('/analyze/beef', methods=['POST'])
+def analyze_beef():
+    file = request.files.get('file')
+    if not file: return jsonify({"error": "No file"}), 400
+
+    path = os.path.join(UPLOAD_FOLDER, secure_filename(file.filename))
+    file.save(path)
+
     try:
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        # 1. 부위 분석
+        res_part = LOADED_MODELS["beef_part"].predict(path, conf=0.4, verbose=False)
+        part_label, part_conf = parse_yolo(res_part)
 
-        file.save(filepath)
+        # 2. 등급 분석
+        res_grade = LOADED_MODELS["beef_grade"].predict(path, conf=0.3, verbose=False)
+        grade_label, grade_conf = parse_yolo(res_grade, is_classification=True)
 
-        results = PART_MODEL.predict(filepath, conf=0.5, iou=0.5, verbose=False)
-
-        detected_part, insight_text, confidence = parse_results(results, 'part')
-
-        os.remove(filepath)
-        filepath = None
-
+        # ⭐ 프론트엔드가 기대하는 필드명으로 한꺼번에 리턴
         return jsonify({
-            "detectedPart": detected_part,
-            "insight": insight_text,
-            "confidence": f"{confidence * 100:.1f}%",
+            "detectedPart": part_label,
+            "partConfidence": f"{part_conf * 100:.1f}%",
+            "detectedGrade": grade_label,
+            "gradeConfidence": f"{grade_conf * 100:.1f}%",
+            "insight": f"분석 결과 {part_label} 부위, {grade_label} 등급입니다.",
+            "recipes": [{}, {}, {}],
             "status": "success"
         })
-
     except Exception as e:
-        error_message = f"부위 분석 중 오류 발생: {e}"
-        print(error_message)
-        if filepath and os.path.exists(filepath):
-            os.remove(filepath)
-
-        return jsonify({"error": error_message}), 500
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if os.path.exists(path): os.remove(path)
 
 
-# --- 엔드포인트: 등급 분석 (JSON 응답 수정) ---
+# --- [4] 닭고기 분석 API ---
+@app.route('/analyze/chicken', methods=['POST'])
+def analyze_chicken():
+    file = request.files.get('file')
+    if not file: return jsonify({"error": "No file"}), 400
 
-@app.route('/analyze/grade', methods=['POST'])
-def analyze_grade():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
-
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-
-    filepath = None
+    path = os.path.join(UPLOAD_FOLDER, secure_filename(file.filename))
+    file.save(path)
     try:
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
-
-        file.save(filepath)
-
-        results = GRADE_MODEL.predict(filepath, conf=0.5, verbose=False)
-
-        # ⭐ 확률 값(confidence)까지 받도록 변경 ⭐
-        detected_grade, insight_text, confidence = parse_results(
-            results,
-            'grade',
-            names_map=GRADE_MODEL.names
-        )
-
-        os.remove(filepath)
-        filepath = None
+        res = LOADED_MODELS["chicken_part"].predict(path, conf=0.4, verbose=False)
+        label, conf = parse_yolo(res)
 
         return jsonify({
-            "detectedGrade": detected_grade,
-            "insight": insight_text,
-            "confidence": f"{confidence * 100:.1f}%",
+            "detectedChickenPart": label,
+            "partConfidence": f"{conf * 100:.1f}%",  # confidence 대신 partConfidence로 통일
+            "insight": f"닭고기 {label} 분석 결과입니다.",
+            "recipes": [{}, {}, {}],
             "status": "success"
         })
-
     except Exception as e:
-        error_message = f"등급 분석 중 오류 발생: {e}"
-        print(error_message)
-        if filepath and os.path.exists(filepath):
-            os.remove(filepath)
-
-        return jsonify({"error": error_message}), 500
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if os.path.exists(path): os.remove(path)
 
 
-# --- 서버 실행 ---
 if __name__ == '__main__':
-    print("Flask 서버를 시작합니다. http://0.0.0.0:5000")
+    # 스프링 부트 서버가 5000번 포트로 요청을 보내도록 설정되어 있는지 확인하세요.
     app.run(host='0.0.0.0', port=5000)

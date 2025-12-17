@@ -1,89 +1,65 @@
 package com.project.beef.config.jwt;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
-import org.springframework.http.HttpMethod; 
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher; 
-import org.springframework.security.web.util.matcher.RequestMatcher;
-import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
-
 import com.project.beef.util.JwtUtil;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
 
-@RequiredArgsConstructor
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 @Component
+@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
 
-    // ⭐ 1. 토큰 검증 없이 무조건 통과시킬 경로만 정의 (로그인, 회원가입, OPTIONS) ⭐
-    private static final List<RequestMatcher> NO_VERIFICATION_MATCHERS = Arrays.asList(
-            // 로그인, 회원가입 경로 (POST 요청)
-            new AntPathRequestMatcher("/auth/**", HttpMethod.POST.name()),
-            
-            // 모든 OPTIONS 요청 허용 (CORS Preflight)
-            new AntPathRequestMatcher("/**", HttpMethod.OPTIONS.name())
+    private static final List<RequestMatcher> EXCLUDE_URLS = Arrays.asList(
+            new AntPathRequestMatcher("/auth/**"),
+            new AntPathRequestMatcher("/api/cut/analyze/**"), // 분석 API 통과
+            new AntPathRequestMatcher("/**", HttpMethod.OPTIONS.name()) // CORS용
     );
 
-    /**
-     * NO_VERIFICATION_MATCHERS에 정의된 경로에 대해서만 필터를 건너뜁니다.
-     * 분석 API(/api/cut/**)는 이제 이 목록에 없어 토큰 검사를 시도합니다.
-     */
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        // 현재 요청이 NO_VERIFICATION_MATCHERS 중 하나와 일치하는지 확인합니다.
-        return NO_VERIFICATION_MATCHERS.stream().anyMatch(matcher -> matcher.matches(request));
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return EXCLUDE_URLS.stream().anyMatch(matcher -> matcher.matches(request));
     }
-    
-    // 이 필터가 처리할 로직 (토큰 검증 및 인증)
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String authorizationHeader = request.getHeader("Authorization");
+        String header = request.getHeader("Authorization");
 
-        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            String token = authorizationHeader.substring(7); // 'Bearer ' 제거
-
+        if (header != null && header.startsWith("Bearer ")) {
+            String token = header.substring(7);
             try {
-                // 1. 토큰 유효성 검증 및 이메일 추출
                 String email = jwtUtil.extractEmail(token);
-
                 if (email != null) {
-                    // 2. 유효한 경우 인증 객체 생성 및 Security Context에 저장
-                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                    UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                             new User(email, "", Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))),
                             null,
-                            Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
-                    
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                    // 인증에 성공했으므로 다음 필터로 진행
+                            Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
+                    );
+                    SecurityContextHolder.getContext().setAuthentication(auth);
                 }
             } catch (Exception e) {
-                // 3. 토큰이 있지만 만료 등 오류 발생 시: 
-                // 기존처럼 401 에러를 발생시키지 않고, 
-                // SecurityContext에 아무것도 설정하지 않은 채 다음 필터로 넘깁니다.
-                // 이 경우 비로그인 상태(ANONYMOUS)로 처리됩니다.
-                System.out.println("토큰 검증 실패: " + e.getMessage());
+                // 검증 실패 시 로그만 남기고 다음 필터로 진행 (permitAll 경로를 위해)
             }
         }
-        
-        // 토큰이 없거나, 토큰이 있어도 유효하지 않은 경우 (catch 블록을 탄 경우 포함),
-        // SecurityContext에 인증 정보가 설정되지 않은 채 다음 필터로 요청을 넘깁니다.
-        // 이 요청은 Spring Security에 의해 "비로그인 (ANONYMOUS)" 상태로 간주됩니다.
         filterChain.doFilter(request, response);
     }
 }

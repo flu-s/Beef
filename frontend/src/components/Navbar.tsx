@@ -77,7 +77,7 @@ function Navbar() {
                 <Beef className="h-6 w-6 text-white" />
             </div>
             <span className="text-2xl font-black tracking-tight text-stone-900">
-                Hanwoo<span className="text-red-600">Vision</span>
+                Meat<span className="text-red-600">Vision</span>
             </span>
         </Link>
         {/* ⭐ 로고 끝 ⭐ */}

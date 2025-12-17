@@ -4,8 +4,6 @@ import type { BeefAnalysisResult } from '../types'; // 실제 경로에 맞게 �
 const BACKEND_API_URL = 'http://localhost:8080/api/cut/analyze';
 
 /**
- * 소고기 이미지를 백엔드 서버로 전송하고 분석 결과를 받습니다.
- * 비회원 사용을 위해 토큰은 선택 사항(nullable)입니다.
  * * @param file 업로드할 File 객체
  * @param token JWT 토큰 (로그인 사용자만 해당, 비회원인 경우 null)
  * @returns 분석 결과 객체 (BeefAnalysisResult)

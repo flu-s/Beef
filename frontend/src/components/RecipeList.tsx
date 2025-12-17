@@ -1,30 +1,30 @@
 import React from 'react';
-import { ChefHat, Clock, Youtube, Search } from 'lucide-react';
+import { ChefHat, Search, Youtube } from 'lucide-react';
 import type { Recipe } from '../types';
 
 interface Props {
   recipes: Recipe[];
   cut: string;
+  meatType: 'beef' | 'chicken';
 }
 
-// 레시피 카드의 아이콘과 배경색을 결정하는 함수
 const getLinkInfo = (index: number) => {
     switch (index % 3) {
-        case 0: // 첫 번째 -> 네이버
+        case 0:
             return {
                 icon: <Search className="h-6 w-6" />,
                 name: '네이버',
                 color: 'text-green-600/70 bg-green-500/10',
                 searchUrl: 'https://search.naver.com/search.naver?query='
             };
-        case 1: // 두 번째 -> 유튜브
+        case 1:
             return {
                 icon: <Youtube className="h-6 w-6" />,
                 name: '유튜브',
                 color: 'text-red-600/70 bg-red-500/10',
                 searchUrl: 'https://www.youtube.com/results?search_query='
             };
-        case 2: // 세 번째 -> 구글
+        case 2:
             return {
                 icon: <Search className="h-6 w-6" />,
                 name: '구글',
@@ -36,11 +36,10 @@ const getLinkInfo = (index: number) => {
     }
 }
 
-const RecipeList: React.FC<Props> = ({ recipes, cut }) => {
+const RecipeList: React.FC<Props> = ({ recipes, cut, meatType }) => {
   const safeRecipes = Array.isArray(recipes) ? recipes : [];
 
   if (safeRecipes.length === 0) {
-    // ... (오류 메시지 부분 생략)
     return (
       <div className="bg-white rounded-3xl p-6 shadow-lg border border-stone-100">
         <div className="flex items-center gap-2 mb-4">
@@ -65,7 +64,7 @@ const RecipeList: React.FC<Props> = ({ recipes, cut }) => {
           <ChefHat className="h-6 w-6 text-red-600" />
         </div>
         <h3 className="text-xl font-bold text-stone-900">
-          <span className="text-red-600">{cut}</span> 추천 조리법
+          <span className={meatType === 'beef' ? 'text-red-600' : 'text-orange-500'}>{cut}</span> 추천 조리법
         </h3>
       </div>
 
@@ -73,19 +72,21 @@ const RecipeList: React.FC<Props> = ({ recipes, cut }) => {
         {safeRecipes.map((recipe, index) => {
           const info = getLinkInfo(index);
 
-          // ⭐⭐⭐ 최종 수정: 검색어를 '소고기 부위 레시피'로 구성 ⭐⭐⭐
-          const searchTerm = `소고기 ${cut} 레시피`;
+          // ⭐ 검색어 최적화 ⭐
+          // 이미 '닭다리'처럼 이름에 '닭'이나 '소'가 있으면 중복 방지
+          const prefix = (cut.includes('닭') || cut.includes('소')) ? "" : (meatType === 'beef' ? '소고기 ' : '닭고기 ');
+          const searchTerm = `${prefix}${cut} 레시피`;
 
           return (
             <a
               key={index}
-              href={`${info.searchUrl}${searchTerm}`}
+              href={`${info.searchUrl}${encodeURIComponent(searchTerm)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="group block bg-stone-50 rounded-2xl overflow-hidden border border-stone-200 hover:border-red-300 hover:shadow-md transition-all cursor-pointer"
+              className={`group block bg-stone-50 rounded-2xl overflow-hidden border border-stone-200 transition-all cursor-pointer ${
+                meatType === 'beef' ? 'hover:border-red-300' : 'hover:border-orange-300'
+              } hover:shadow-md`}
             >
-
-              {/* 상단 검색 엔진 영역 */}
               <div className={`h-32 relative overflow-hidden flex flex-col items-center justify-center ${info.color}`}>
                  <div className="flex items-center gap-2">
                    {info.icon}
@@ -93,13 +94,13 @@ const RecipeList: React.FC<Props> = ({ recipes, cut }) => {
                  </div>
               </div>
 
-              {/* 하단 UI: 부위와 검색어만 강조 */}
               <div className="p-4 flex flex-col items-center justify-center h-20">
-                <h4 className="font-bold text-lg text-stone-900 mb-1 group-hover:text-red-600 transition-colors uppercase">
-                   {/* 부위만 크게 표시 */}
+                <h4 className={`font-black text-lg text-stone-900 mb-1 transition-colors uppercase ${
+                  meatType === 'beef' ? 'group-hover:text-red-600' : 'group-hover:text-orange-500'
+                }`}>
                    {cut}
                 </h4>
-                <p className="text-sm text-stone-500">
+                <p className="text-sm text-stone-500 font-medium">
                    레시피 검색
                 </p>
               </div>

@@ -28,11 +28,13 @@ public class Cut {
     private Long id;
 
     // AI 분석 결과를 저장할 필드
+	private String meatType;
     private String detectedPart;
     private String detectedGrade;
     private String insight;
     private String fileName;
     private String memberId;
+    
     
     // 추가 DB 필드 (예: 등록 시간, 사용자 ID 등)
     @CreationTimestamp
