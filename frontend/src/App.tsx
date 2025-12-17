@@ -37,11 +37,9 @@ function BeefAnalysisApp() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
 
-  // 모델 결과값(영어)을 한글로 변환
   const getKoreanName = (name: string, type: 'beef' | 'chicken') => {
     if (!name || name === '-' || name === 'N/A') return '판정 불가';
     const lowerName = name.toLowerCase().trim();
-
     const mapping: any = {
       'leg': '닭다리', 'wing': '닭날개', 'breast': '닭가슴살', 'thigh': '넓적다리', 'drumstick': '닭다리',
       'chuck': '목심', 'fillet': '안심', 'round': '우둔살', 'flank': '양지', 'striploin': '채끝', 'rib': '갈비'
@@ -49,16 +47,13 @@ function BeefAnalysisApp() {
     return mapping[lowerName] || name;
   };
 
-  // ⭐ 확률 값을 % 형식으로 변환하는 함수 ⭐
-  const formatPercentage = (val: any) => {
-    if (val === undefined || val === null || val === 'N/A' || val === 'null') return '';
-    const num = parseFloat(val);
-    if (isNaN(num)) return val;
-    // 0.95 -> 95.0% / 95 -> 95% 처리
-    return num <= 1 ? `${(num * 100).toFixed(1)}%` : `${num}%`;
-  };
-
   const processFile = async (selectedFile: File) => {
+    // 파일 타입 검증 (이미지 파일인지 확인)
+    if (!selectedFile.type.startsWith('image/')) {
+      alert("이미지 파일(JPG, PNG)만 업로드 가능합니다.");
+      return;
+    }
+
     setPreview(URL.createObjectURL(selectedFile));
     setUploadState('analyzing');
     setErrorMsg('');
@@ -67,13 +62,10 @@ function BeefAnalysisApp() {
       const token = localStorage.getItem('jwtToken');
       const data = await analyzeMeatImage(selectedFile, meatType, token);
 
-      // ⭐ 데이터 매핑: 서버 필드명(partConfidence, gradeConfidence 등)에 맞춰 안전하게 추출 ⭐
       const mappedResult = {
         ...data,
-        // 부위 확률 (닭/소 공통)
-        displayPartConf: formatPercentage(data.partConfidence || data.confidence || data.probability),
-        // 등급 확률 (소고기 전용)
-        displayGradeConf: formatPercentage(data.gradeConfidence || data.grade_confidence),
+        displayPartConf: data.partConfidence || 'N/A',
+        displayGradeConf: data.gradeConfidence || 'N/A',
         recipes: data.recipes && data.recipes.length > 0 ? data.recipes : [{}, {}, {}]
       };
 
@@ -110,10 +102,23 @@ function BeefAnalysisApp() {
                 <button onClick={() => setMeatType('chicken')} className={`px-8 py-3 rounded-2xl font-bold transition-all ${meatType === 'chicken' ? 'bg-orange-500 text-white shadow-lg scale-105' : 'bg-white text-stone-400 border'}`}>🐔 닭고기</button>
               </div>
             </div>
-            <div className={`w-full max-w-xl h-64 border-2 border-dashed rounded-3xl bg-white flex flex-col items-center justify-center cursor-pointer transition-all ${meatType === 'beef' ? 'hover:border-red-500' : 'hover:border-orange-500'}`} onClick={() => fileInputRef.current?.click()}>
+            <div
+              className={`w-full max-w-xl h-64 border-2 border-dashed rounded-3xl bg-white flex flex-col items-center justify-center cursor-pointer transition-all ${meatType === 'beef' ? 'hover:border-red-500' : 'hover:border-orange-500'}`}
+              onClick={() => fileInputRef.current?.click()}
+            >
               <Upload className="h-10 w-10 text-stone-300 mb-4" />
               <p className="text-lg font-bold text-stone-700">{meatType === 'beef' ? '소고기' : '닭고기'} 사진 선택</p>
-              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => e.target.files && processFile(e.target.files[0])} />
+
+              {/* ⭐ 사용자가 볼 수 있는 안내 문구 추가 ⭐ */}
+              <p className="text-sm text-stone-400 mt-2 font-medium">※ JPG, JPEG, PNG, WEBP 파일만 넣어주세요</p>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept=".jpg, .jpeg, .png" // ⭐ 파일 선택창에서 해당 확장자만 보이게 제한 ⭐
+                onChange={(e) => e.target.files && processFile(e.target.files[0])}
+              />
             </div>
           </div>
         )}
@@ -143,7 +148,6 @@ function BeefAnalysisApp() {
                     <span className="text-stone-500">판정 부위</span>
                     <div className="text-right">
                       <p className="text-xl font-bold">{getKoreanName(result.detectedPart || result.detectedChickenPart, meatType)}</p>
-                      {/* ⭐ 가공된 확률 값 표시 ⭐ */}
                       <p className={`text-sm font-semibold ${meatType === 'beef' ? 'text-red-500' : 'text-orange-500'}`}>
                         {result.displayPartConf}
                       </p>
@@ -154,7 +158,6 @@ function BeefAnalysisApp() {
                       <span className="text-stone-500">판정 등급</span>
                       <div className="text-right">
                         <p className="text-xl font-bold">{result.detectedGrade} 등급</p>
-                        {/* ⭐ 소고기 등급 확률 값 표시 (null 문제 해결) ⭐ */}
                         <p className="text-sm text-red-500 font-semibold">{result.displayGradeConf}</p>
                       </div>
                     </div>
