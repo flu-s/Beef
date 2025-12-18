@@ -21,36 +21,31 @@ public class ShopFacadeServiceImpl implements ShopFacadeService {
 
     @Override
     public List<ShopResponse> searchNearby(double lat, double lng) {
-
-        // 1️⃣ 카카오: 정확한 위치 기반
+        // 1️⃣ 카카오 데이터 가져오기 (기존 동일)
         List<ShopResponse> kakao = kakaoShopService.searchButcherShops(lat, lng)
                 .stream()
                 .map(shop -> recalcDistance(shop, lat, lng))
                 .filter(shop -> shop.getDistance() <= MAX_DISTANCE)
                 .toList();
 
-        // 🔥 카카오 결과가 충분하면 네이버 호출 안 함
-        if (kakao.size() >= 10) {
-            return kakao;
-        }
-
-        // 2️⃣ 네이버: 보조 데이터 (거리 필터 필수)
+        // 2️⃣ 네이버 데이터 가져오기 (기존 동일)
         List<ShopResponse> naver = naverShopService.searchButcherShops(lat, lng)
                 .stream()
                 .map(shop -> recalcDistance(shop, lat, lng))
                 .filter(shop -> shop.getDistance() <= MAX_DISTANCE)
                 .toList();
 
-        // 3️⃣ 합치고 정렬
+        // 3️⃣ 합치고, 중복 제거 후, 거리순 정렬하여 딱 5개만 반환 🔥
         return Stream.concat(kakao.stream(), naver.stream())
                 .collect(Collectors.collectingAndThen(
                         Collectors.toMap(
                                 ShopResponse::getName,
                                 s -> s,
-                                (a, b) -> a // 중복 제거
+                                (a, b) -> a 
                         ),
                         map -> map.values().stream()
                                 .sorted(Comparator.comparingInt(ShopResponse::getDistance))
+                                .limit(5) // 👈 여기서 5개로 제한합니다.
                                 .toList()
                 ));
     }

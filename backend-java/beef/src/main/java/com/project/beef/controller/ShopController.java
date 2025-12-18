@@ -18,13 +18,10 @@ public class ShopController {
 
     @GetMapping
     public ResponseEntity<List<ShopResponse>> getNearby(
-            @RequestParam double lat,
-            @RequestParam double lng
+            @RequestParam(name = "lat") double lat,  // 👈 (name = "lat") 추가
+            @RequestParam(name = "lng") double lng   // 👈 (name = "lng") 추가
     ) {
-        System.out.println("📌 Kakao 요청 좌표 x=" + lng + ", y=" + lat);
-        return ResponseEntity.ok(
-
-                shopFacadeService.searchNearby(lat, lng)
-        );
+        System.out.println("📌 API 호출 좌표: lat=" + lat + ", lng=" + lng);
+        return ResponseEntity.ok(shopFacadeService.searchNearby(lat, lng));
     }
 }

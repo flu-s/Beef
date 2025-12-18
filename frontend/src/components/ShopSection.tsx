@@ -42,7 +42,7 @@ const ShopSection: React.FC = () => {
           <div className="bg-blue-100 p-2 rounded-full">
             <MapPin className="h-6 w-6 text-blue-600" />
           </div>
-          <h3 className="text-xl font-bold">내 주변 우수 정육점</h3>
+          <h3 className="text-xl font-bold">내 주변 정육점</h3>
         </div>
 
         {/* ③ 지도 크게 보기 */}

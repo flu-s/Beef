@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPin, Star, Phone, Navigation } from "lucide-react";
+import { MapPin, Star, Navigation } from "lucide-react"; // Phone 아이콘 제거
 import type { ButcherShop } from "../types";
 
 interface ShopListProps {
@@ -13,6 +13,9 @@ const ShopList: React.FC<ShopListProps> = ({
   selectedShopId,
   onShopClick,
 }) => {
+  // ✅ 프론트엔드에서도 안전하게 상위 5개만 표시하도록 제한
+  const displayedShops = shops.slice(0, 5);
+
   return (
     <div className="bg-white rounded-3xl p-6 shadow-lg border border-stone-100">
       {/* 헤더 */}
@@ -21,15 +24,13 @@ const ShopList: React.FC<ShopListProps> = ({
           <MapPin className="h-6 w-6 text-blue-600" />
         </div>
         <h3 className="text-xl font-bold text-stone-900">
-          내 주변 우수 정육점
+          내 주변 정육점
         </h3>
       </div>
 
-
-
       {/* 리스트 */}
       <div className="space-y-3">
-        {shops.map((shop) => (
+        {displayedShops.map((shop) => (
           <div
             key={shop.id}
             onClick={() => onShopClick(shop)}
@@ -41,7 +42,7 @@ const ShopList: React.FC<ShopListProps> = ({
               }`}
           >
             {/* 정보 */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0"> {/* min-w-0은 텍스트 줄임표(...)를 위해 필요 */}
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-bold text-stone-900">{shop.name}</span>
               </div>
@@ -52,58 +53,16 @@ const ShopList: React.FC<ShopListProps> = ({
                   {shop.rating}
                 </span>
                 <span>|</span>
-                <span>{shop.distance}</span>
+                <span>{shop.distance}m</span>
                 <span>|</span>
-                <span className="truncate max-w-[150px]">
+                <span className="truncate block">
                   {shop.address}
                 </span>
               </div>
             </div>
 
-            <div className="flex gap-2 items-center">
-              {/* 전화번호 / 복사 버튼 */}
-              <div className="flex gap-2 items-center">
-                {shop.phone ? (
-                  <div className="relative group">
-                    <button
-                      onClick={(e) => e.stopPropagation()}
-                      className="p-2 bg-stone-100 rounded-full text-stone-600
-                                 hover:bg-stone-200 hover:text-stone-900 transition-colors"
-                    >
-                      <Phone className="h-4 w-4" />
-                    </button>
-                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1
-                                    hidden group-hover:block
-                                    bg-black text-white text-xs px-2 py-1 rounded shadow">
-                      {shop.phone}
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    disabled
-                    className="p-2 bg-stone-50 rounded-full text-stone-300 cursor-not-allowed"
-                  >
-                    <Phone className="h-4 w-4" />
-                  </button>
-                )}
-
-                {shop.phone && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigator.clipboard.writeText(shop.phone);
-                      alert("전화번호가 복사되었습니다!");
-                    }}
-                    title="전화번호 복사"
-                    className="p-2 bg-stone-100 rounded-full text-stone-600
-                               hover:bg-blue-100 hover:text-blue-600 transition-colors"
-                  >
-                    📋
-                  </button>
-                )}
-              </div>
-
-              {/* 지도 버튼 */}
+            {/* 액션 버튼: 전화번호 제거됨 */}
+            <div className="flex items-center ml-4">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -117,9 +76,12 @@ const ShopList: React.FC<ShopListProps> = ({
                 <Navigation className="h-4 w-4" />
               </button>
             </div>
-
           </div>
         ))}
+
+        {displayedShops.length === 0 && (
+          <p className="text-center text-stone-400 py-10">주변에 정육점이 없습니다.</p>
+        )}
       </div>
     </div>
   );
