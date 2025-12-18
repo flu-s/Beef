@@ -2,7 +2,6 @@ package com.project.beef.dto.kakao;
 
 import lombok.Getter;
 import lombok.Setter;
-
 import java.util.List;
 
 @Getter

@@ -77,4 +77,3 @@ public class KakaoShopService implements ShopService {
                 .toList();
     }
 }
-

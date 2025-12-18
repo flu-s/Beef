@@ -1,6 +1,5 @@
 package com.project.beef.dto.naver;
 
-
 import lombok.Data;
 import java.util.List;
 
