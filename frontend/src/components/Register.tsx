@@ -46,7 +46,7 @@ const Register: React.FC = () => {
       <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl border border-stone-200 animate-fade-in-up">
         <div className="text-center mb-10">
           <h2 className="text-3xl font-black text-stone-900 tracking-tight mb-2">
-            Hanwoo<span className="text-red-600">Vision</span> 회원가입
+            Meat<span className="text-red-600">Vision</span> 회원가입
           </h2>
           <p className="text-stone-500">간단한 정보 입력 후 서비스를 시작하세요.</p>
         </div>

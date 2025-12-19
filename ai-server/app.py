@@ -68,7 +68,6 @@ def analyze_beef():
         res_grade = LOADED_MODELS["beef_grade"].predict(path, conf=0.3, verbose=False)
         grade_label, grade_conf = parse_yolo(res_grade, is_classification=True)
 
-        # ⭐ 프론트엔드가 기대하는 필드명으로 한꺼번에 리턴
         return jsonify({
             "detectedPart": part_label,
             "partConfidence": f"{part_conf * 100:.1f}%",
@@ -98,7 +97,7 @@ def analyze_chicken():
 
         return jsonify({
             "detectedChickenPart": label,
-            "partConfidence": f"{conf * 100:.1f}%",  # confidence 대신 partConfidence로 통일
+            "partConfidence": f"{conf * 100:.1f}%",
             "insight": f"닭고기 {label} 분석 결과입니다.",
             "recipes": [{}, {}, {}],
             "status": "success"
@@ -110,5 +109,4 @@ def analyze_chicken():
 
 
 if __name__ == '__main__':
-    # 스프링 부트 서버가 5000번 포트로 요청을 보내도록 설정되어 있는지 확인하세요.
     app.run(host='0.0.0.0', port=5000)
