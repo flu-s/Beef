@@ -1,8 +1,6 @@
 import type { ButcherShop, Coordinates } from "../types";
 
-// Connects to the local Spring Boot Backend
-// Ensure your Java Spring Boot app is running on port 8080
-const API_BASE_URL = "http://localhost:8080/api/shops";
+const API_BASE_URL = "https://beef-t4x8.onrender.com/api/shops";
 
 export const fetchNearbyShops = async (center: Coordinates): Promise<ButcherShop[]> => {
   try {
