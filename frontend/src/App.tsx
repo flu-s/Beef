@@ -14,10 +14,10 @@ const analyzeMeatImage = async (file: File, type: 'beef' | 'chicken', token: str
   const formData = new FormData();
   formData.append('file', file);
 
-  // Vercel 환경 변수 VITE_AI_API_URL이 설정되어 있어야 합니다.
+  // Vercel Environment Variables에 등록한 주소를 사용합니다.
   const AI_SERVER_URL = import.meta.env.VITE_AI_API_URL || 'https://ai-server-05pj.onrender.com';
 
-  // ⚠️ app.py의 @app.route('/analyze/<meat_type>')와 정확히 일치시킴
+  // ⚠️ 중요: 경로를 /analyze/${type}으로 통일하여 AI 서버의 route와 일치시킵니다.
   const response = await fetch(`${AI_SERVER_URL}/analyze/${type}`, {
     method: 'POST',
     headers: token ? { 'Authorization': `Bearer ${token}` } : {},
@@ -67,7 +67,7 @@ function BeefAnalysisApp() {
       const token = localStorage.getItem('jwtToken');
       const data = await analyzeMeatImage(selectedFile, meatType, token);
 
-      // AI 서버 응답 구조에 맞게 데이터 세팅
+      // AI 서버 응답 구조 매핑
       const mappedResult = {
         ...data,
         displayPart: data.detectedPart || data.detectedChickenPart,
@@ -78,7 +78,7 @@ function BeefAnalysisApp() {
       setResult(mappedResult);
       setUploadState('result');
     } catch (err: any) {
-      console.error("분석 에러:", err);
+      console.error("Analysis Error:", err);
       setErrorMsg(err.message);
       setUploadState('error');
     }
@@ -105,8 +105,8 @@ function BeefAnalysisApp() {
               어떤 <span className={meatType === 'beef' ? 'text-red-600' : 'text-orange-500'}>고기</span>인가요?
             </h1>
             <div className="flex gap-4">
-              <button onClick={() => setMeatType('beef')} className={`px-10 py-4 rounded-2xl font-bold transition-all ${meatType === 'beef' ? 'bg-red-600 text-white shadow-lg scale-105' : 'bg-white text-stone-400 border'}`}>🐮 소고기</button>
-              <button onClick={() => setMeatType('chicken')} className={`px-10 py-4 rounded-2xl font-bold transition-all ${meatType === 'chicken' ? 'bg-orange-500 text-white shadow-lg scale-105' : 'bg-white text-stone-400 border'}`}>🐔 닭고기</button>
+              <button onClick={() => setMeatType('beef')} className={`px-10 py-4 rounded-2xl font-bold transition-all ${meatType === 'beef' ? 'bg-red-600 text-white shadow-lg' : 'bg-white text-stone-400 border'}`}>🐮 소고기</button>
+              <button onClick={() => setMeatType('chicken')} className={`px-10 py-4 rounded-2xl font-bold transition-all ${meatType === 'chicken' ? 'bg-orange-500 text-white shadow-lg' : 'bg-white text-stone-400 border'}`}>🐔 닭고기</button>
             </div>
             <div className="w-full max-w-xl h-64 border-2 border-dashed rounded-3xl bg-white flex flex-col items-center justify-center cursor-pointer hover:border-stone-400" onClick={() => fileInputRef.current?.click()}>
               <Upload className="h-12 w-12 text-stone-300 mb-4" />
@@ -123,7 +123,7 @@ function BeefAnalysisApp() {
               <div className="absolute inset-0 animate-scan border-b-4 border-red-500"></div>
             </div>
             <p className="text-2xl font-bold animate-pulse text-stone-800">AI가 분석 중입니다...</p>
-            <p className="text-stone-500">서버가 깨어나는 데 약 1분이 걸릴 수 있습니다.</p>
+            <p className="text-stone-500">서버가 처음 깨어나는 데 약 1분이 소요될 수 있습니다.</p>
           </div>
         )}
 
