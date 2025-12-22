@@ -1,4 +1,4 @@
 Flask==3.1.2
 flask-cors==5.0.0
-ultralytics  # YOLO를 쓰신다면 이것만 있어도 torch가 같이 설치됩니다.
-opencv-python-headless  # 서버용 가벼운 버전입니다.
+ultralytics
+opencv-python-headless
