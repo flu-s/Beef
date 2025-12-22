@@ -4,7 +4,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 
 import Navbar from './components/Navbar';
 import RecipeList from './components/RecipeList';
-import ShopSection from './components/ShopSection'; // 분리된 컴포넌트
+import ShopSection from './components/ShopSection'; 
 import LoginPage from './components/Login';
 import RegisterPage from './components/Register';
 import { AuthProvider } from './contexts/AuthContext';
@@ -15,14 +15,21 @@ const analyzeMeatImage = async (file: File, type: 'beef' | 'chicken', token: str
   const formData = new FormData();
   formData.append('file', file);
 
-  await fetch(`https://beef-q0ke.onrender.com/api/cut/analyze/${type}``, {`
+  // 1. Vercel 환경 변수가 있으면 사용하고, 없으면 직접 주소를 사용합니다.
+  const AI_SERVER_URL = import.meta.env.VITE_AI_API_URL || 'https://ai-server-05pj.onrender.com';
+
+  // 2. 요청 주소를 AI 서버로 변경 (기존 beef-q0ke 서버는 로그인용입니다)
+  const response = await fetch(`${AI_SERVER_URL}/api/cut/analyze/${type}`, {
     method: 'POST',
     headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     body: formData,
   });
 
   const data = await response.json();
-  if (!response.ok) throw new Error(data.insight || '분석 서버 응답 실패');
+
+  if (!response.ok) {
+    throw new Error(data.insight || '분석 서버 응답 실패');
+  }
   return data;
 };
 
@@ -100,7 +107,6 @@ function BeefAnalysisApp() {
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col">
       <main className="flex-grow container mx-auto px-4 py-8 max-w-4xl">
-        {/* IDLE 상태 */}
         {uploadState === 'idle' && (
           <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 animate-fade-in">
             <div className="text-center space-y-4">
@@ -132,7 +138,6 @@ function BeefAnalysisApp() {
           </div>
         )}
 
-        {/* ANALYZING 상태 */}
         {uploadState === 'analyzing' && preview && (
           <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
             <div className="relative w-64 h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-stone-900">
@@ -143,7 +148,6 @@ function BeefAnalysisApp() {
           </div>
         )}
 
-        {/* RESULT 상태 */}
         {uploadState === 'result' && result && (
           <div className="animate-fade-in-up space-y-8">
             <div className="bg-white rounded-3xl shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-2 border border-stone-200">
@@ -179,13 +183,10 @@ function BeefAnalysisApp() {
             </div>
 
             <RecipeList recipes={result.recipes || []} cut={getKoreanName(result.detectedPart || result.detectedChickenPart, meatType)} meatType={meatType} />
-
-            {/* 분리된 지도 및 정육점 컴포넌트 */}
             <ShopSection />
           </div>
         )}
 
-        {/* ERROR 상태 */}
         {uploadState === 'error' && (
           <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-6">
             <AlertCircle className="h-16 w-16 text-red-600" />
