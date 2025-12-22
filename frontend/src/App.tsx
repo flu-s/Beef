@@ -15,7 +15,7 @@ const analyzeMeatImage = async (file: File, type: 'beef' | 'chicken', token: str
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(`http://localhost:8080/api/cut/analyze/${type}`, {
+  await fetch(\https://www.google.com/search?q=https://beef-t4x8.onrender.com/api/cut/analyze/${type}`, {`
     method: 'POST',
     headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     body: formData,
