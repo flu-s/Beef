@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/auth") 
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class MemberController {
 
     private final MemberService memberService;
