@@ -17,8 +17,7 @@ const Register: React.FC = () => {
     }
 
     try {
-        // 💡 백엔드 회원가입 API 호출 (가정: http://localhost:8080/auth/register)
-        const response = await fetch('http://localhost:8080/auth/register', {
+        const response = await fetch('https://beef-t4x8.onrender.com/auth/register', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
