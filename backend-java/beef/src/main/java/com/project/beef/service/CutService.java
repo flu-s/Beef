@@ -30,7 +30,7 @@ public class CutService {
     private final CutRepository cutRepository; 
     private final RestTemplate restTemplate; 
 
-    private static final String AI_SERVER_URL = "http://localhost:5000";
+    private static final String AI_SERVER_URL = "https://ai-server-05pj.onrender.com";
 
     /**
      * 현재 로그인된 사용자의 memberId(이메일) 추출
