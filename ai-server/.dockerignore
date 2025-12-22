@@ -1,0 +1,5 @@
+.git
+.gitattributes
+frontend/
+backend-java/
+runs/
