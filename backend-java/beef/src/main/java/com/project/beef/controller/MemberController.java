@@ -1,7 +1,6 @@
 package com.project.beef.controller;
 
 import com.project.beef.util.JwtUtil;
-import org.springframework.web.bind.annotation.CrossOrigin;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/auth") 
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class MemberController {
 
     private final MemberService memberService;
