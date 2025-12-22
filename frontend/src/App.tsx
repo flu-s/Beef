@@ -14,10 +14,10 @@ const analyzeMeatImage = async (file: File, type: 'beef' | 'chicken', token: str
   const formData = new FormData();
   formData.append('file', file);
 
-  // Vercel 환경 변수 사용 (없으면 직접 주소 사용)
+  // Vercel 환경 변수 VITE_AI_API_URL이 설정되어 있어야 합니다.
   const AI_SERVER_URL = import.meta.env.VITE_AI_API_URL || 'https://ai-server-05pj.onrender.com';
 
-  // ⚠️ 중요: 경로를 /analyze/${type}으로 통일하여 AI 서버의 경로와 일치시킴
+  // ⚠️ app.py의 @app.route('/analyze/<meat_type>')와 정확히 일치시킴
   const response = await fetch(`${AI_SERVER_URL}/analyze/${type}`, {
     method: 'POST',
     headers: token ? { 'Authorization': `Bearer ${token}` } : {},
@@ -26,13 +26,12 @@ const analyzeMeatImage = async (file: File, type: 'beef' | 'chicken', token: str
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `분석 실패 (상태코드: ${response.status})`);
+    throw new Error(errorData.error || `서버 응답 에러: ${response.status}`);
   }
 
   return await response.json();
 };
 
-// --- 메인 컴포넌트 ---
 function BeefAnalysisApp() {
   const [meatType, setMeatType] = useState<'beef' | 'chicken'>('beef');
   const [preview, setPreview] = useState<string | null>(null);
@@ -68,7 +67,7 @@ function BeefAnalysisApp() {
       const token = localStorage.getItem('jwtToken');
       const data = await analyzeMeatImage(selectedFile, meatType, token);
 
-      // AI 서버 응답 데이터 매핑
+      // AI 서버 응답 구조에 맞게 데이터 세팅
       const mappedResult = {
         ...data,
         displayPart: data.detectedPart || data.detectedChickenPart,
@@ -101,7 +100,7 @@ function BeefAnalysisApp() {
     <div className="min-h-screen bg-stone-50 flex flex-col">
       <main className="flex-grow container mx-auto px-4 py-8 max-w-4xl">
         {uploadState === 'idle' && (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 animate-fade-in">
+          <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
             <h1 className="text-4xl md:text-6xl font-black text-stone-900 text-center">
               어떤 <span className={meatType === 'beef' ? 'text-red-600' : 'text-orange-500'}>고기</span>인가요?
             </h1>
@@ -111,7 +110,7 @@ function BeefAnalysisApp() {
             </div>
             <div className="w-full max-w-xl h-64 border-2 border-dashed rounded-3xl bg-white flex flex-col items-center justify-center cursor-pointer hover:border-stone-400" onClick={() => fileInputRef.current?.click()}>
               <Upload className="h-12 w-12 text-stone-300 mb-4" />
-              <p className="text-xl font-bold text-stone-700">사진을 업로드하세요</p>
+              <p className="text-xl font-bold text-stone-700">고기 사진을 업로드하세요</p>
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => e.target.files && processFile(e.target.files[0])} />
             </div>
           </div>
@@ -123,8 +122,8 @@ function BeefAnalysisApp() {
               <img src={preview!} className="w-full h-full object-cover" alt="preview" />
               <div className="absolute inset-0 animate-scan border-b-4 border-red-500"></div>
             </div>
-            <p className="text-2xl font-bold animate-pulse text-stone-800">AI가 고기를 분석 중입니다...</p>
-            <p className="text-stone-500">서버 상태에 따라 최대 1분 정도 소요될 수 있습니다.</p>
+            <p className="text-2xl font-bold animate-pulse text-stone-800">AI가 분석 중입니다...</p>
+            <p className="text-stone-500">서버가 깨어나는 데 약 1분이 걸릴 수 있습니다.</p>
           </div>
         )}
 
@@ -135,23 +134,23 @@ function BeefAnalysisApp() {
               <div className="p-8 flex flex-col justify-center">
                 <div className="flex items-center gap-2 mb-4">
                   <CheckCircle2 className="text-green-500" />
-                  <span className="font-bold text-stone-400 uppercase tracking-widest">Analysis Success</span>
+                  <span className="font-bold text-stone-400">Analysis Success</span>
                 </div>
                 <h2 className="text-3xl font-black text-stone-900 mb-6">분석 완료</h2>
                 <div className="space-y-4 mb-8">
                   <div className="flex justify-between items-center border-b pb-3">
-                    <span className="text-stone-500 font-medium">판정 부위</span>
+                    <span className="text-stone-500 font-medium">부위</span>
                     <span className="text-xl font-bold text-stone-900">{getKoreanName(result.displayPart, meatType)} ({result.displayConf})</span>
                   </div>
                   {meatType === 'beef' && (
                     <div className="flex justify-between items-center border-b pb-3">
-                      <span className="text-stone-500 font-medium">판정 등급</span>
+                      <span className="text-stone-500 font-medium">등급</span>
                       <span className="text-xl font-bold text-red-600">{result.detectedGrade} 등급 ({result.gradeConfidence})</span>
                     </div>
                   )}
                 </div>
-                <button onClick={resetApp} className="w-full py-4 bg-stone-900 text-white rounded-xl font-bold hover:bg-stone-800 transition-all flex items-center justify-center gap-2">
-                  <RefreshCw className="h-5 w-5" /> 다시 분석하기
+                <button onClick={resetApp} className="w-full py-4 bg-stone-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-stone-800">
+                  <RefreshCw className="h-5 w-5" /> 다시 시도
                 </button>
               </div>
             </div>
@@ -165,7 +164,7 @@ function BeefAnalysisApp() {
             <AlertCircle className="h-20 w-20 text-red-600" />
             <h2 className="text-3xl font-bold text-stone-800">분석 실패</h2>
             <p className="text-stone-600 text-center max-w-md">{errorMsg}</p>
-            <button onClick={resetApp} className="px-10 py-4 bg-stone-900 text-white rounded-xl font-bold hover:bg-stone-800">메인으로 돌아가기</button>
+            <button onClick={resetApp} className="px-10 py-4 bg-stone-900 text-white rounded-xl font-bold hover:bg-stone-800">다시 시도하기</button>
           </div>
         )}
       </main>
@@ -176,14 +175,12 @@ function BeefAnalysisApp() {
 function App() {
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-stone-50">
-        <Navbar />
-        <Routes>
-          <Route path="/" element={<BeefAnalysisApp />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-        </Routes>
-      </div>
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<BeefAnalysisApp />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+      </Routes>
     </AuthProvider>
   );
 }
