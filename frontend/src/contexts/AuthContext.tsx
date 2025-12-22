@@ -2,10 +2,7 @@
 
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 
-// ⭐⭐ 핵심 수정: 타입스크립트의 * as 구문을 사용하여 모듈을 통째로 가져와서 임포트 오류를 방지합니다. ⭐⭐
-import * as jwtDecodeModule from 'jwt-decode';
-// 다양한 환경에서 jwtDecode 함수를 안전하게 가져오는 로직
-const jwtDecode = (jwtDecodeModule as any).jwtDecode || (jwtDecodeModule as any).default || jwtDecodeModule;
+import { jwtDecode } from 'jwt-decode';
 
 // JWT 디코딩 후 결과 객체의 최소 타입 정의
 interface DecodedToken {
