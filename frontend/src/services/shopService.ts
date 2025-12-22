@@ -1,6 +1,6 @@
 import type { ButcherShop, Coordinates } from "../types";
 
-const API_BASE_URL = "https://beef-t4x8.onrender.com/api/shops";
+const API_BASE_URL = "https://beef-q0ke.onrender.com/api/shops";
 
 export const fetchNearbyShops = async (center: Coordinates): Promise<ButcherShop[]> => {
   try {
