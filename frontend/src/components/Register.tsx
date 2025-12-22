@@ -17,7 +17,7 @@ const Register: React.FC = () => {
     }
 
     try {
-        const response = await fetch('https://beef-t4x8.onrender.com/auth/register', {
+        const response = await fetch('https://beef-q0ke.onrender.com/auth/register', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
