@@ -1,7 +1,7 @@
 // geminiService.ts (수정된 전체 코드)
 import type { BeefAnalysisResult } from '../types'; // 실제 경로에 맞게 수정해주세요
 
-const BACKEND_API_URL = 'https://beef-t4x8.onrender.com/api/cut/analyze';
+const BACKEND_API_URL = 'https://beef-q0ke.onrender.com/api/cut/analyze';
 
 /**
  * * @param file 업로드할 File 객체
