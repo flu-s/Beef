@@ -1,16 +1,16 @@
-// geminiService.ts (수정된 전체 코드)
-import type { BeefAnalysisResult } from '../types'; // 실제 경로에 맞게 수정해주세요
+// src/services/geminiService.ts
+import type { BeefAnalysisResult } from '../types';
 
-const BACKEND_API_URL = 'https://beef-q0ke.onrender.com/api/cut/analyze';
+// ❌ 기존: 'https://beef-q0ke.onrender.com/api/cut/analyze'
+// ✅ 수정: AI 전용 서버 주소로 변경
+const AI_API_URL = 'https://ai-server-05pj.onrender.com/api/cut/analyze/beef'; 
 
 /**
- * * @param file 업로드할 File 객체
- * @param token JWT 토큰 (로그인 사용자만 해당, 비회원인 경우 null)
- * @returns 분석 결과 객체 (BeefAnalysisResult)
+ * @param file 업로드할 File 객체
+ * @param token JWT 토큰
+ * @returns 분석 결과 객체
  */
 export async function analyzeBeefImage(file: File, token: string | null): Promise<BeefAnalysisResult> {
-
-    // 1. Multipart/form-data 생성
     const formData = new FormData();
     formData.append('file', file);
 
@@ -20,50 +20,32 @@ export async function analyzeBeefImage(file: File, token: string | null): Promis
     }
 
     try {
-        const response = await fetch(BACKEND_API_URL, {
+        // AI 서버로 요청을 보냅니다.
+        const response = await fetch(AI_API_URL, {
             method: 'POST',
-            headers: headers, // 조건부로 설정된 headers 객체 사용
+            headers: headers,
             body: formData,
         });
 
         if (!response.ok) {
             const errorText = await response.text();
-            let errorMessage = `API 호출 실패: ${response.status} ${response.statusText}`;
-
-            if (response.status === 401) {
-                errorMessage = "인증 정보가 유효하지 않습니다. 다시 로그인해 주세요.";
-            } else if (response.status === 500 && errorText) {
-                 // 백엔드에서 500 Internal Server Error 시, 에러 메시지가 있다면 사용
-                 errorMessage = `서버 내부 오류: ${errorText}`;
-            } else {
-                 errorMessage = errorText || errorMessage; // 백엔드에서 전달된 상세 에러 메시지를 사용
-            }
-
-            throw new Error(errorMessage);
+            throw new Error(`AI 서버 오류 (${response.status}): ${errorText || response.statusText}`);
         }
 
-        // ⭐⭐⭐ 핵심 수정 1: response.json() 호출 전 응답 텍스트를 먼저 로깅 (디버깅용) ⭐⭐⭐
-        // JSON 파싱 오류가 발생하면 여기서 멈춥니다.
         const responseText = await response.text();
-        console.log("DEBUG: Backend response text:", responseText);
+        console.log("DEBUG: AI 서버 응답:", responseText);
 
         if (!responseText) {
-            throw new Error("서버로부터 빈 응답을 받았습니다. (분석 데이터 없음)");
+            throw new Error("AI 서버로부터 빈 응답을 받았습니다.");
         }
 
-        // ⭐⭐⭐ 핵심 수정 2: 텍스트를 JSON으로 변환 ⭐⭐⭐
-        const analysisResult: BeefAnalysisResult = JSON.parse(responseText);
-        return analysisResult;
+        return JSON.parse(responseText) as BeefAnalysisResult;
 
     } catch (e) {
-        console.error("Error in analyzeBeefImage service:", e);
-
-        // ⭐⭐⭐ 핵심 수정 3: JSON 파싱 오류를 명확히 알림 ⭐⭐⭐
+        console.error("AI 서비스 에러:", e);
         if (e instanceof SyntaxError) {
-             // 이 에러는 백엔드가 JSON 대신 HTML/빈 문자열 등을 반환했을 때 발생합니다.
-             throw new Error("분석 응답 처리 중 데이터 형식 오류: 서버에서 예상치 못한 데이터가 왔습니다.");
+            throw new Error("데이터 형식 오류: AI 서버가 올바른 JSON을 반환하지 않았습니다.");
         }
-
         throw e;
     }
 }
