@@ -1,6 +1,7 @@
 package com.project.beef.controller;
 
 import com.project.beef.util.JwtUtil;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
