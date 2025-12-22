@@ -1,5 +1,10 @@
 .git
-.gitattributes
-frontend/
-backend-java/
-runs/
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.db
+data/
+models/
