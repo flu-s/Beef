@@ -5,18 +5,21 @@ from ultralytics import YOLO
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-# 모든 오리진 허용 (CORS 해결)
+# 모든 도메인에서의 접속을 허용합니다 (CORS 문제 해결)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# --- [1] 모델 경로 설정 (상대 경로로 자동 설정) ---
+# --- [1] 모델 경로 설정 (가장 중요) ---
+# 현재 app.py 파일이 있는 폴더의 절대 경로를 가져옵니다.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# 이미지 구조(image_09790a.png)에 맞게 경로를 설정합니다.
 MODEL_PATHS = {
     "beef_part": os.path.join(BASE_DIR, "weight", "beef_part.pt"),
     "beef_grade": os.path.join(BASE_DIR, "weight", "beef_grade.pt"),
     "chicken_part": os.path.join(BASE_DIR, "weight", "chicken_part.pt")
 }
 
-UPLOAD_FOLDER = 'temp_uploads'
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'temp_uploads')
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
@@ -26,13 +29,15 @@ try:
     for name, path in MODEL_PATHS.items():
         if os.path.exists(path):
             LOADED_MODELS[name] = YOLO(path)
-            print(f"✅ {name} 로드 성공")
+            print(f"✅ {name} 로드 성공: {path}")
         else:
+            # 이 메시지가 뜨면 GitHub의 ai-server/weight 폴더를 다시 확인해야 합니다.
             print(f"❌ 파일 없음: {path}")
 except Exception as e:
     print(f"❌ 모델 로드 중 에러: {e}")
 
-# --- [2] 결과 처리 유틸리티 ---
+
+# 결과 처리 유틸리티
 def parse_yolo(results, is_classification=False):
     label, conf = "N/A", 0.0
     if not results or len(results) == 0:
@@ -50,7 +55,8 @@ def parse_yolo(results, is_classification=False):
             conf = float(box.conf[0])
     return label, conf
 
-# --- [3] 소고기 분석 API ---
+
+# --- [2] 소고기 분석 API ---
 @app.route('/analyze/beef', methods=['POST'])
 def analyze_beef():
     file = request.files.get('file')
@@ -74,7 +80,7 @@ def analyze_beef():
             "partConfidence": f"{part_conf * 100:.1f}%",
             "detectedGrade": grade_label,
             "gradeConfidence": f"{grade_conf * 100:.1f}%",
-            "insight": f"{part_label} 부위, {grade_label} 등급으로 판정되었습니다.",
+            "insight": f"분석 결과 {part_label} 부위, {grade_label} 등급으로 판정되었습니다.",
             "recipes": [],
             "status": "success"
         })
@@ -83,7 +89,8 @@ def analyze_beef():
     finally:
         if os.path.exists(path): os.remove(path)
 
-# --- [4] 닭고기 분석 API ---
+
+# --- [3] 닭고기 분석 API ---
 @app.route('/analyze/chicken', methods=['POST'])
 def analyze_chicken():
     file = request.files.get('file')
@@ -100,7 +107,7 @@ def analyze_chicken():
         return jsonify({
             "detectedChickenPart": label,
             "partConfidence": f"{conf * 100:.1f}%",
-            "insight": f"닭고기 {label} 부위로 판정되었습니다.",
+            "insight": f"닭고기 {label} 분석 결과입니다.",
             "recipes": [],
             "status": "success"
         })
@@ -109,6 +116,8 @@ def analyze_chicken():
     finally:
         if os.path.exists(path): os.remove(path)
 
+
 if __name__ == '__main__':
+    # Render 포트 설정
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
