@@ -1,7 +1,7 @@
 import type { BeefAnalysisResult } from "../types";
 
 // 백엔드 API 주소
-const API_URL = "https://beef-t4x8.onrender.com/api/cut/analyze";
+const API_URL = "https://beef-q0ke.onrender.com/api/cut/analyze";
 
 export const analyzeBeefImage = async (imageFile: File, token: string | null): Promise<BeefAnalysisResult> => {
   try {
