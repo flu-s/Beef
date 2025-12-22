@@ -8,30 +8,28 @@ import ShopSection from './components/ShopSection';
 import LoginPage from './components/Login';
 import RegisterPage from './components/Register';
 import { AuthProvider } from './contexts/AuthContext';
-import type { ButcherShop } from './types';
+import type { BeefAnalysisResult } from './types';
 
 // --- API 서비스 함수 ---
 const analyzeMeatImage = async (file: File, type: 'beef' | 'chicken', token: string | null) => {
   const formData = new FormData();
   formData.append('file', file);
 
-  // 1. 환경 변수 확인 (Vercel 설정값 우선, 없으면 직접 주소 사용)
+  // Vercel 환경 변수 우선 사용, 없으면 직접 주소 사용
   const AI_SERVER_URL = import.meta.env.VITE_AI_API_URL || 'https://ai-server-05pj.onrender.com';
 
-  // 2. fetch 요청 (기존 코드의 백틱 오류 및 response 선언 누락 수정)
-  const response = await fetch(`${AI_SERVER_URL}/api/cut/analyze/${type}`, {
+  // ⚠️ 경로 수정: /api/cut 제거 -> /analyze/${type}
+  const response = await fetch(`${AI_SERVER_URL}/analyze/${type}`, {
     method: 'POST',
     headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     body: formData,
   });
 
-  // 3. 응답 상태 확인
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.insight || '분석 서버에서 응답을 받지 못했습니다.');
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.insight || `분석 실패 (에러코드: ${response.status})`);
   }
 
-  // 4. 결과 데이터 반환
   return await response.json();
 };
 
@@ -59,7 +57,7 @@ function BeefAnalysisApp() {
 
   const processFile = async (selectedFile: File) => {
     if (!selectedFile.type.startsWith('image/')) {
-      alert("이미지 파일(JPG, PNG)만 업로드 가능합니다.");
+      alert("이미지 파일만 업로드 가능합니다.");
       return;
     }
 
@@ -71,19 +69,17 @@ function BeefAnalysisApp() {
       const token = localStorage.getItem('jwtToken');
       const data = await analyzeMeatImage(selectedFile, meatType, token);
 
-      // 데이터 매핑 및 기본값 처리
       const mappedResult = {
         ...data,
         displayPartConf: data.partConfidence || 'N/A',
         displayGradeConf: data.gradeConfidence || 'N/A',
-        recipes: data.recipes && data.recipes.length > 0 ? data.recipes : []
+        recipes: data.recipes || []
       };
 
       setResult(mappedResult);
       setUploadState('result');
     } catch (err: any) {
-      console.error("Analysis Error:", err);
-      setErrorMsg(err.message || '알 수 없는 오류가 발생했습니다.');
+      setErrorMsg(err.message);
       setUploadState('error');
     }
   };
@@ -103,85 +99,66 @@ function BeefAnalysisApp() {
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col">
       <main className="flex-grow container mx-auto px-4 py-8 max-w-4xl">
-        {/* 선택 및 업로드 화면 */}
         {uploadState === 'idle' && (
           <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 animate-fade-in">
-            <div className="text-center space-y-4">
-              <h1 className="text-4xl md:text-6xl font-black text-stone-900 tracking-tight">
-                어떤 <span className={meatType === 'beef' ? 'text-red-600' : 'text-orange-500'}>고기</span> 분석인가요?
-              </h1>
-              <div className="flex gap-4 justify-center mt-6">
-                <button onClick={() => setMeatType('beef')} className={`px-8 py-3 rounded-2xl font-bold transition-all ${meatType === 'beef' ? 'bg-red-600 text-white shadow-lg scale-105' : 'bg-white text-stone-400 border'}`}>🐮 소고기</button>
-                <button onClick={() => setMeatType('chicken')} className={`px-8 py-3 rounded-2xl font-bold transition-all ${meatType === 'chicken' ? 'bg-orange-500 text-white shadow-lg scale-105' : 'bg-white text-stone-400 border'}`}>🐔 닭고기</button>
-              </div>
+            <h1 className="text-4xl md:text-6xl font-black text-stone-900 tracking-tight text-center">
+              어떤 <span className={meatType === 'beef' ? 'text-red-600' : 'text-orange-500'}>고기</span> 분석인가요?
+            </h1>
+            <div className="flex gap-4">
+              <button onClick={() => setMeatType('beef')} className={`px-8 py-3 rounded-2xl font-bold ${meatType === 'beef' ? 'bg-red-600 text-white' : 'bg-white border'}`}>🐮 소고기</button>
+              <button onClick={() => setMeatType('chicken')} className={`px-8 py-3 rounded-2xl font-bold ${meatType === 'chicken' ? 'bg-orange-500 text-white' : 'bg-white border'}`}>🐔 닭고기</button>
             </div>
-
-            <div
-              className={`w-full max-w-xl h-64 border-2 border-dashed rounded-3xl bg-white flex flex-col items-center justify-center cursor-pointer transition-all ${meatType === 'beef' ? 'hover:border-red-500' : 'hover:border-orange-500'}`}
+            <div 
+              className="w-full max-w-xl h-64 border-2 border-dashed rounded-3xl bg-white flex flex-col items-center justify-center cursor-pointer"
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="h-10 w-10 text-stone-300 mb-4" />
-              <p className="text-lg font-bold text-stone-700">{meatType === 'beef' ? '소고기' : '닭고기'} 사진 선택</p>
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept="image/*"
-                onChange={(e) => e.target.files && processFile(e.target.files[0])}
-              />
+              <p className="font-bold text-stone-700">사진을 업로드하여 AI 분석 시작</p>
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => e.target.files && processFile(e.target.files[0])} />
             </div>
           </div>
         )}
 
-        {/* 로딩 화면 */}
-        {uploadState === 'analyzing' && preview && (
+        {uploadState === 'analyzing' && (
           <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
             <div className="relative w-64 h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-stone-900">
-              <img src={preview} className="w-full h-full object-cover" alt="scanning" />
-              <div className={`absolute inset-0 animate-scan border-b-4 ${meatType === 'beef' ? 'border-red-500' : 'border-orange-500'}`}></div>
+              <img src={preview!} className="w-full h-full object-cover" alt="scanning" />
+              <div className="absolute inset-0 animate-scan border-b-4 border-red-500"></div>
             </div>
-            <p className="text-xl font-bold text-stone-700 animate-pulse">AI가 분석 중입니다. 잠시만 기다려주세요...</p>
+            <p className="text-xl font-bold animate-pulse">AI 분석 중... (최대 1분 소요)</p>
           </div>
         )}
 
-        {/* 결과 화면 */}
         {uploadState === 'result' && result && (
-          <div className="animate-fade-in-up space-y-8">
-            <div className="bg-white rounded-3xl shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-2 border border-stone-200">
+          <div className="space-y-8">
+            <div className="bg-white rounded-3xl shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-2 border">
               <img src={preview!} className="w-full h-full object-cover" alt="result" />
               <div className="p-8 flex flex-col justify-center">
-                <div className="flex items-center gap-2 mb-4">
-                  <CheckCircle2 className={meatType === 'beef' ? 'text-red-600' : 'text-orange-500'} />
-                  <span className="font-bold text-stone-400 uppercase tracking-tighter">{meatType} RESULT</span>
-                </div>
-                <h2 className="text-3xl font-black text-stone-900 mb-6">분석 완료</h2>
+                <h2 className="text-3xl font-black mb-6">분석 결과</h2>
                 <div className="space-y-4 mb-8">
-                  <div className="flex justify-between items-center border-b pb-3">
-                    <span className="text-stone-500">부위</span>
-                    <p className="text-xl font-bold">{getKoreanName(result.detectedPart || result.detectedChickenPart, meatType)}</p>
+                  <div className="flex justify-between border-b pb-2">
+                    <span>판정 부위</span>
+                    <span className="font-bold">{getKoreanName(result.detectedPart || result.detectedChickenPart, meatType)}</span>
                   </div>
                   {meatType === 'beef' && (
-                    <div className="flex justify-between items-center border-b pb-3">
-                      <span className="text-stone-500">등급</span>
-                      <p className="text-xl font-bold">{result.detectedGrade || 'N/A'} 등급</p>
+                    <div className="flex justify-between border-b pb-2">
+                      <span>판정 등급</span>
+                      <span className="font-bold">{result.detectedGrade} 등급</span>
                     </div>
                   )}
                 </div>
-                <button onClick={resetApp} className="w-full py-4 bg-stone-900 text-white rounded-xl font-bold flex items-center justify-center gap-2">
-                  <RefreshCw className="h-5 w-5" /> 다시 시도
-                </button>
+                <button onClick={resetApp} className="w-full py-4 bg-stone-900 text-white rounded-xl font-bold">다시 분석하기</button>
               </div>
             </div>
-            <RecipeList recipes={result.recipes || []} cut={getKoreanName(result.detectedPart || result.detectedChickenPart, meatType)} meatType={meatType} />
+            <RecipeList recipes={result.recipes} cut={getKoreanName(result.detectedPart || result.detectedChickenPart, meatType)} meatType={meatType} />
             <ShopSection />
           </div>
         )}
 
-        {/* 에러 화면 */}
         {uploadState === 'error' && (
           <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-6">
             <AlertCircle className="h-16 w-16 text-red-600" />
-            <h2 className="text-2xl font-bold text-stone-800">분석 실패</h2>
+            <h2 className="text-2xl font-bold">분석 실패</h2>
             <p className="text-stone-600 text-center">{errorMsg}</p>
             <button onClick={resetApp} className="px-10 py-3 bg-stone-900 text-white rounded-xl font-bold">돌아가기</button>
           </div>
@@ -194,15 +171,12 @@ function BeefAnalysisApp() {
 function App() {
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-stone-50 flex flex-col">
-        <Navbar />
-        <Routes>
-          <Route path="/" element={<BeefAnalysisApp />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="*" element={<div className="text-center pt-20 text-xl font-bold">404 Not Found</div>} />
-        </Routes>
-      </div>
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<BeefAnalysisApp />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+      </Routes>
     </AuthProvider>
   );
 }
