@@ -16,24 +16,27 @@ public class ShopFacadeServiceImpl implements ShopFacadeService {
 
     private final ShopService kakaoShopService;
 
+    // ✅ 카카오 서비스만 사용하도록 주입 (네이버는 좌표 검색이 안 되어 부정확함)
     public ShopFacadeServiceImpl(@Qualifier("kakaoShopService") ShopService kakaoShopService) {
         this.kakaoShopService = kakaoShopService;
     }
 
     @Override
     public List<ShopResponse> searchNearby(double lat, double lng) {
-        // 1. 좌표를 정확히 지원하는 카카오 데이터만 먼저 가져옵니다.
-        List<ShopResponse> kakaoShops = kakaoShopService.searchButcherShops(lat, lng);
+        // 1. 프론트엔드에서 보내준 실시간 좌표(수원역 등)로 카카오 API 호출
+        List<ShopResponse> shops = kakaoShopService.searchButcherShops(lat, lng);
 
-        // 2. 각 상점의 거리를 내 현재 위치(lat, lng) 기준으로 다시 정확히 계산합니다.
-        return kakaoShops.stream()
+        if (shops == null || shops.isEmpty()) return List.of();
+
+        // 2. 검색된 상점들의 거리를 내 위치 기준으로 다시 한 번 정확히 계산
+        return shops.stream()
                 .map(shop -> {
-                    int actualDist = DistanceUtils.calcMeter(lat, lng, shop.getLocation().lat(), shop.getLocation().lng());
-                    shop.setDistance(actualDist);
+                    int dist = DistanceUtils.calcMeter(lat, lng, 
+                                 shop.getLocation().lat(), shop.getLocation().lng());
+                    shop.setDistance(dist);
                     return shop;
                 })
-                .filter(shop -> shop.getDistance() <= 3000) // 3km 이내만
-                .sorted(Comparator.comparingInt(ShopResponse::getDistance)) // 거리순 정렬
+                .sorted(Comparator.comparingInt(ShopResponse::getDistance)) // 가까운 순 정렬
                 .limit(5) // 상위 5개
                 .collect(Collectors.toList());
     }
