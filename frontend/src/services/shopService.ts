@@ -1,19 +1,23 @@
 import { ButcherShop, Coordinates } from "../types";
 
-/**
- * 사용자 위치 기준 주변 3km 내 정육점 5개를 가져옵니다.
- */
+const BACKEND_URL = "https://beef-q0ke.onrender.com"; 
+
 export const fetchNearbyShops = async (location: Coordinates): Promise<ButcherShop[]> => {
   try {
-    // Render 서버의 상대 경로 또는 전체 URL
-    const response = await fetch(`/api/shops?lat=${location.lat}&lng=${location.lng}`);
+    // 404 에러 해결을 위해 절대 경로(https://...)를 사용합니다.
+    const response = await fetch(`${BACKEND_URL}/api/shops?lat=${location.lat}&lng=${location.lng}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`백엔드 서버 응답 오류! 상태 코드: ${response.status}`);
     }
 
     const data = await response.json();
-    return data; // 서버에서 거리순 정렬 및 5개 제한이 완료된 리스트
+    return data; 
   } catch (error) {
     console.error("fetchNearbyShops 에러:", error);
     throw error;
