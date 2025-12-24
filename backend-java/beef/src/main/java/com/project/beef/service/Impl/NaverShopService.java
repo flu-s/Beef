@@ -1,8 +1,9 @@
 package com.project.beef.service.Impl;
 
 import com.project.beef.dto.ShopResponse;
-import com.project.beef.dto.naver.NaverSearchResponse; // 작성하신 DTO
+import com.project.beef.dto.naver.NaverSearchResponse;
 import com.project.beef.service.ShopService;
+import com.project.beef.util.DistanceUtils; // 거리 계산 유틸 필요
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.RequestEntity;
@@ -28,58 +29,53 @@ public class NaverShopService implements ShopService {
 
     @Override
     public List<ShopResponse> searchButcherShops(double lat, double lng) {
-        // 1. 네이버 API 호출 준비
+        // 1. 네이버 로컬 API는 좌표를 직접 받지 않으므로 검색어에 "정육점"만 넣으면 서울 위주로 나옵니다.
+        // 이를 방지하기 위해 Kakao에서 데이터를 주로 가져오거나, 검색어를 보강해야 합니다.
+        
         URI uri = UriComponentsBuilder
                 .fromUriString("https://openapi.naver.com")
                 .path("/v1/search/local.json")
-                .queryParam("query", "정육점") // 혹은 "강남구 정육점" 처럼 동적으로 지역명 추가 권장
-                .queryParam("display", 5)
+                .queryParam("query", "정육점") // ⚠️ 좌표 기반이 아니어서 한계가 있음
+                .queryParam("display", 10)
                 .queryParam("start", 1)
-                .queryParam("sort", "comment")
+                .queryParam("sort", "random") // 거리순 지원 안함
                 .encode()
                 .build()
                 .toUri();
 
         RestTemplate restTemplate = new RestTemplate();
-
-        RequestEntity<Void> req = RequestEntity
-                .get(uri)
+        RequestEntity<Void> req = RequestEntity.get(uri)
                 .header("X-Naver-Client-Id", clientId)
                 .header("X-Naver-Client-Secret", clientSecret)
                 .build();
 
-        // 2. 네이버 API 호출 및 응답 받기 (작성하신 DTO 사용!)
         ResponseEntity<NaverSearchResponse> response = restTemplate.exchange(req, NaverSearchResponse.class);
-
-        // 3. 네이버 응답(NaverSearchResponse) -> 프론트엔드 응답(ShopResponse) 변환
         List<ShopResponse> shopList = new ArrayList<>();
 
         if (response.getBody() != null && response.getBody().getItems() != null) {
             shopList = response.getBody().getItems().stream().map(item -> {
-
-                // [중요] mapx, mapy는 KATECH 좌표이므로 WGS84(위경도)로 변환해야 지도에 정확히 뜸.
-                // 여기서는 예시로 입력받은 lat, lng 주변에 임의로 배치하는 가짜 로직을 넣습니다.
-                // 실제 서비스시에는 GeoTrans 라이브러리 등을 써서 item.getMapx()를 변환해야 합니다.
-                double convertedLat = lat + (Math.random() * 0.002 - 0.001);
-                double convertedLng = lng + (Math.random() * 0.002 - 0.001);
-
+                // ⚠️ 가짜 로직 대신 고정 좌표를 피하기 위해 임시로 아주 먼 곳으로 처리하거나
+                // 네이버 데이터가 현재 위치와 너무 다르면 필터링되도록 거리를 0으로 일단 둡니다.
+                // (이후 ShopFacadeService에서 거리 계산 시 걸러짐)
+                
                 return new ShopResponse(
                         UUID.randomUUID().toString(),
-                        cleanHtml(item.getTitle()),  // HTML 태그 제거 (<b/> 등)
+                        cleanHtml(item.getTitle()),
                         item.getAddress(),
-                        new ShopResponse.Location(convertedLat, convertedLng),
-                        4.5, // 평점 정보는 검색 API에서 안 주므로 임의값
-                        100, // 거리 계산 로직 필요
+                        new ShopResponse.Location(0.0, 0.0), // 좌표 변환 전까지는 0.0 처리 권장
+                        4.5,
+                        9999, // 매우 먼 거리로 초기화
                         true
                 );
             }).collect(Collectors.toList());
         }
 
-        return shopList;
+        // 네이버 데이터가 신뢰도가 낮으므로 빈 리스트를 반환하거나 
+        // 카카오 데이터만 쓰도록 유도하는 것이 정확도 면에서 좋습니다.
+        return new ArrayList<>(); 
     }
 
-    // HTML 태그 제거용 헬퍼 메소드
     private String cleanHtml(String input) {
-        return input.replaceAll("<[^>]*>", "");
+        return input == null ? "" : input.replaceAll("<[^>]*>", "");
     }
 }
