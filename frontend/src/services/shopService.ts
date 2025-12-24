@@ -1,28 +1,21 @@
-import type { ButcherShop, Coordinates } from "../types";
+import { ButcherShop, Coordinates } from "../types";
 
-const API_BASE_URL = "https://beef-q0ke.onrender.com/api/shops";
-
-export const fetchNearbyShops = async (center: Coordinates): Promise<ButcherShop[]> => {
+/**
+ * 사용자 위치 기준 주변 3km 내 정육점 5개를 가져옵니다.
+ */
+export const fetchNearbyShops = async (location: Coordinates): Promise<ButcherShop[]> => {
   try {
-    console.log(`Fetching shops for location: ${center.lat}, ${center.lng}`);
-
-    // Call the Spring Boot Controller: @GetMapping("/api/shops")
-    // Added a timestamp to prevent caching issues during development
-    const response = await fetch(`${API_BASE_URL}?lat=${center.lat}&lng=${center.lng}&_t=${new Date().getTime()}`);
+    // Render 서버의 상대 경로 또는 전체 URL
+    const response = await fetch(`/api/shops?lat=${location.lat}&lng=${location.lng}`);
 
     if (!response.ok) {
-      throw new Error(`API call failed with status: ${response.status}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-
-    // The Java DTO structure matches our TypeScript interface, so we can cast directly.
-    return data as ButcherShop[];
-
+    return data; // 서버에서 거리순 정렬 및 5개 제한이 완료된 리스트
   } catch (error) {
-    console.error("Failed to fetch shops from backend:", error);
-
-    // Propagate the error so the UI can handle it (show an alert or error message)
+    console.error("fetchNearbyShops 에러:", error);
     throw error;
   }
 };
