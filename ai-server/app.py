@@ -1,15 +1,14 @@
 import os
-import gc  # 메모리 청소를 위한 가비지 컬렉터
+import gc
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from ultralytics import YOLO
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-# 모든 도메인 접속 허용
+# CORS 설정을 명확하게 프론트엔드 주소로 지정하거나, 아래처럼 전체 허용합니다.
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# --- [1] 경로 설정 ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATHS = {
     "beef_part": os.path.join(BASE_DIR, "weight", "beef_part.pt"),
@@ -21,20 +20,18 @@ UPLOAD_FOLDER = os.path.join(BASE_DIR, 'temp_uploads')
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# --- [2] 모델 로드 (최적화 적용) ---
+# 모델 로드 최적화
 LOADED_MODELS = {}
-try:
+def load_models():
     for name, path in MODEL_PATHS.items():
         if os.path.exists(path):
-            # 메모리 점유를 줄이기 위해 CPU 모드로 로드
+            # half=True (FP16) 옵션을 사용하면 메모리 사용량을 절반으로 줄일 수 있습니다.
             model = YOLO(path)
-            model.to('cpu') 
+            model.to('cpu')
             LOADED_MODELS[name] = model
             print(f"✅ {name} 로드 성공")
-        else:
-            print(f"❌ 파일 없음: {path}")
-except Exception as e:
-    print(f"❌ 모델 로드 중 에러: {e}")
+
+load_models()
 
 def parse_yolo(results, is_classification=False):
     label, conf = "N/A", 0.0
@@ -52,25 +49,25 @@ def parse_yolo(results, is_classification=False):
             conf = float(box.conf[0])
     return label, conf
 
-# --- [3] API 엔드포인트 ---
 @app.route('/analyze/beef', methods=['POST'])
 def analyze_beef():
-    file = request.files.get('file')
-    if not file: return jsonify({"error": "No file"}), 400
-
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    
+    file = request.files['file']
     filename = secure_filename(file.filename)
     path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(path)
 
     try:
-        # 분석 실행 (verbose=False로 로그 출력 억제)
-        res_part = LOADED_MODELS["beef_part"].predict(path, conf=0.4, verbose=False)
+        # imgsz를 줄여서 메모리 사용량을 낮춥니다 (기본 640 -> 320)
+        res_part = LOADED_MODELS["beef_part"].predict(path, imgsz=320, conf=0.4, verbose=False)
         part_label, part_conf = parse_yolo(res_part)
 
-        res_grade = LOADED_MODELS["beef_grade"].predict(path, conf=0.3, verbose=False)
+        res_grade = LOADED_MODELS["beef_grade"].predict(path, imgsz=320, conf=0.3, verbose=False)
         grade_label, grade_conf = parse_yolo(res_grade, is_classification=True)
 
-        # 분석 후 메모리 강제 정리
+        # 메모리 강제 정리
         del res_part, res_grade
         gc.collect()
 
@@ -79,14 +76,14 @@ def analyze_beef():
             "partConfidence": f"{part_conf * 100:.1f}%",
             "detectedGrade": grade_label,
             "gradeConfidence": f"{grade_conf * 100:.1f}%",
-            "insight": f"분석 결과 {part_label} 부위, {grade_label} 등급으로 판정되었습니다.",
-            "recipes": [],
             "status": "success"
         })
     except Exception as e:
+        print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
     finally:
-        if os.path.exists(path): os.remove(path)
+        if os.path.exists(path):
+            os.remove(path)
 
 @app.route('/analyze/chicken', methods=['POST'])
 def analyze_chicken():
@@ -98,7 +95,7 @@ def analyze_chicken():
     file.save(path)
 
     try:
-        res = LOADED_MODELS["chicken_part"].predict(path, conf=0.4, verbose=False)
+        res = LOADED_MODELS["chicken_part"].predict(path, imgsz=320, conf=0.4, verbose=False)
         label, conf = parse_yolo(res)
         
         del res
@@ -107,8 +104,6 @@ def analyze_chicken():
         return jsonify({
             "detectedChickenPart": label,
             "partConfidence": f"{conf * 100:.1f}%",
-            "insight": f"닭고기 {label} 분석 결과입니다.",
-            "recipes": [],
             "status": "success"
         })
     except Exception as e:
@@ -117,5 +112,5 @@ def analyze_chicken():
         if os.path.exists(path): os.remove(path)
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
