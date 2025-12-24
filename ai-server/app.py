@@ -22,29 +22,29 @@ UPLOAD_FOLDER = os.path.join(BASE_DIR, 'temp_uploads')
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# ✅ 전역 모델 로드 (서버 시작 시 1회)
-print("--- Loading Models... ---")
-models = {
-    "beef_part": YOLO(os.path.join(MODEL_DIR, "beef_part.pt")),
-    "beef_grade": YOLO(os.path.join(MODEL_DIR, "beef_grade.pt")),
-    "chicken_part": YOLO(os.path.join(MODEL_DIR, "chicken_part.pt"))
-}
-print("--- Models Loaded Successfully! ---")
-
 def get_prediction(model_name, image_path, is_class=False):
-    model = models.get(model_name)
-    if not model:
-        return "N/A", 0.0
+    """
+    메모리 절약을 위해 함수 호출 시에만 모델을 로드하고,
+    사용 직후 메모리에서 해제(del)합니다.
+    """
+    model_path = os.path.join(MODEL_DIR, f"{model_name}.pt")
     
-    # ✅ 메모리 절약을 위해 Gradient 계산 비활성화
-    with torch.no_grad():
-        try:
-            # ✅ imgsz=320으로 고정하여 메모리 폭발 방지
+    # 모델 파일 존재 여부 확인
+    if not os.path.exists(model_path):
+        print(f"Error: Model file {model_path} not found.")
+        return "N/A", 0.0
+
+    try:
+        # 1. 모델 로드 (함수 실행 시점에 로드)
+        model = YOLO(model_path)
+        
+        # 2. 예측 (imgsz를 320으로 낮춰 메모리 폭발 방지)
+        with torch.no_grad():
             results = model.predict(image_path, imgsz=320, conf=0.25, verbose=False)
             
             label, conf = "N/A", 0.0
             if results and len(results) > 0:
-                res = results[0] # 결과를 변수에 할당 후 즉시 처리
+                res = results[0]
                 if is_class:
                     if hasattr(res, 'probs') and res.probs is not None:
                         idx = int(res.probs.top1)
@@ -56,17 +56,19 @@ def get_prediction(model_name, image_path, is_class=False):
                         label = res.names[int(box.cls[0])]
                         conf = float(box.conf[0])
             
-            # ✅ 사용 완료된 결과 객체 명시적 삭제
+            # 3. 결과 객체와 모델 객체 즉시 삭제하여 메모리 확보
             del results
+            del model
             return label, conf
             
-        except Exception as e:
-            print(f"Error prediction {model_name}: {e}")
-            return "N/A", 0.0
-        finally:
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            gc.collect() # 가비지 컬렉션 강제 실행
+    except Exception as e:
+        print(f"Error prediction {model_name}: {e}")
+        return "N/A", 0.0
+    finally:
+        # 가비지 컬렉션 및 캐시 비우기
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gc.collect()
 
 @app.route('/analyze/beef', methods=['POST'])
 def analyze_beef():
@@ -79,7 +81,11 @@ def analyze_beef():
     file.save(path)
 
     try:
+        # 소고기 부위 분석 (로드 -> 분석 -> 삭제)
         part_label, part_conf = get_prediction("beef_part", path)
+        
+        # 소고기 등급 분석 (로드 -> 분석 -> 삭제)
+        # 순차적으로 진행하므로 메모리 피크치가 낮게 유지됩니다.
         grade_label, grade_conf = get_prediction("beef_grade", path, is_class=True)
 
         return jsonify({
@@ -90,6 +96,7 @@ def analyze_beef():
             "status": "success"
         })
     except Exception as e:
+        print(f"Analyze Beef Error: {e}")
         return jsonify({"error": str(e)}), 500
     finally:
         if os.path.exists(path):
@@ -107,6 +114,7 @@ def analyze_chicken():
     file.save(path)
 
     try:
+        # 닭고기 부위 분석
         label, conf = get_prediction("chicken_part", path)
         return jsonify({
             "detectedChickenPart": label,
@@ -114,12 +122,19 @@ def analyze_chicken():
             "status": "success"
         })
     except Exception as e:
+        print(f"Analyze Chicken Error: {e}")
         return jsonify({"error": str(e)}), 500
     finally:
         if os.path.exists(path):
             os.remove(path)
         gc.collect()
 
+# 기본 경로 (Render 헬스체크용)
+@app.route('/', methods=['GET', 'HEAD'])
+def index():
+    return "AI Server is Running", 200
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+    # Render 무료 플랜 환경에서는 debug=False 권장
+    app.run(host='0.0.0.0', port=port, debug=False)
