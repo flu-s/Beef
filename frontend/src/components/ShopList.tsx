@@ -1,71 +1,55 @@
 import React from "react";
-import { MapPin, Star, Navigation } from "lucide-react";
+import { Star, Navigation, MapPin } from "lucide-react";
 import type { ButcherShop } from "../types";
 
 interface ShopListProps {
   shops: ButcherShop[];
-  selectedShopId: number | null;
   onShopClick: (shop: ButcherShop) => void;
 }
 
-const ShopList: React.FC<ShopListProps> = ({
-  shops,
-  selectedShopId,
-  onShopClick,
-}) => {
-  // ✅ 상위 5개만 노출하도록 제한
-  const displayedShops = shops.slice(0, 5);
-
+const ShopList: React.FC<ShopListProps> = ({ shops, onShopClick }) => {
   return (
-    <div className="bg-white rounded-3xl p-6 shadow-lg border border-stone-100 mt-4">
-      {/* 리스트 헤더 */}
-      <div className="flex items-center gap-2 mb-6">
-        <div className="bg-blue-100 p-2 rounded-full">
-          <MapPin className="h-6 w-6 text-blue-600" />
+    <div className="space-y-4">
+      {shops.length === 0 ? (
+        <div className="py-12 text-center">
+          <MapPin className="h-12 w-12 text-stone-200 mx-auto mb-3" />
+          <p className="text-stone-400 font-medium">주변 3km 이내에 검색된 매장이 없습니다.</p>
         </div>
-        <h3 className="text-xl font-bold text-stone-900">내 주변 정육점</h3>
-      </div>
-
-      {/* 상점 아이템 리스트 */}
-      <div className="space-y-3">
-        {displayedShops.length === 0 ? (
-          <p className="text-center text-stone-400 py-10">주변에 검색된 정육점이 없습니다.</p>
-        ) : (
-          displayedShops.map((shop) => (
-            <div
-              key={shop.id}
-              onClick={() => onShopClick(shop)}
-              className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer
-                ${shop.id === selectedShopId ? "border-blue-500 bg-blue-50 shadow-sm" : "border-stone-50 hover:bg-stone-50"}`}
-            >
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-stone-900 truncate mb-1">{shop.name}</div>
-                <div className="flex items-center gap-2 text-xs text-stone-500">
-                  <span className="flex items-center text-yellow-500 font-bold">
-                    <Star className="h-3 w-3 fill-current mr-0.5" /> {shop.rating || 4.5}
-                  </span>
-                  <span>|</span>
-                  <span className="text-blue-600 font-medium">{shop.distance}m</span>
-                  <span>|</span>
-                  <span className="truncate">{shop.address}</span>
-                </div>
+      ) : (
+        shops.map((shop) => (
+          <div
+            key={shop.id}
+            onClick={() => onShopClick(shop)}
+            className="group flex items-center justify-between p-4 rounded-2xl border border-stone-100 hover:border-blue-200 hover:bg-blue-50/50 cursor-pointer transition-all duration-300"
+          >
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-stone-900 text-lg truncate mb-1 group-hover:text-blue-700 transition-colors">
+                {shop.name}
               </div>
-              
-              {/* 길찾기 버튼 */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const url = shop.mapUrl || `https://map.naver.com/v5/search/${encodeURIComponent(shop.name)}`;
-                  window.open(url, "_blank");
-                }}
-                className="p-2.5 bg-blue-600 rounded-full text-white shadow-sm hover:bg-blue-700 transition-colors"
-              >
-                <Navigation className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-2 text-sm text-stone-500">
+                <span className="flex items-center text-amber-500 font-bold">
+                  <Star className="h-3.5 w-3.5 fill-current mr-0.5" /> {shop.rating || "4.5"}
+                </span>
+                <span className="text-stone-300">|</span>
+                <span className="text-blue-600 font-bold">{shop.distance}m</span>
+                <span className="text-stone-300">|</span>
+                <span className="truncate">{shop.address}</span>
+              </div>
             </div>
-          ))
-        )}
-      </div>
+            
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const searchUrl = `https://map.naver.com/v5/search/${encodeURIComponent(shop.name)}`;
+                window.open(searchUrl, "_blank");
+              }}
+              className="ml-4 p-3 bg-blue-600 text-white rounded-full shadow-md hover:bg-blue-700 hover:scale-110 active:scale-95 transition-all"
+            >
+              <Navigation className="h-5 w-5" />
+            </button>
+          </div>
+        ))
+      )}
     </div>
   );
 };
