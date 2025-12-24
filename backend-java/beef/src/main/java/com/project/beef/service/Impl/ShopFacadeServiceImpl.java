@@ -17,25 +17,25 @@ public class ShopFacadeServiceImpl implements ShopFacadeService {
     private final KakaoShopService kakaoShopService;
     private final NaverShopService naverShopService;
 
-    private static final int MAX_DISTANCE = 3000; // 3km 이내
+    private static final int MAX_DISTANCE = 3000; // 3km
 
     @Override
     public List<ShopResponse> searchNearby(double lat, double lng) {
-        // 1. 카카오 데이터 가져오기 및 거리 재계산
+        // 1. 카카오 데이터
         List<ShopResponse> kakao = kakaoShopService.searchButcherShops(lat, lng)
                 .stream()
                 .map(shop -> updateRealDistance(shop, lat, lng))
                 .filter(shop -> shop.getDistance() <= MAX_DISTANCE)
                 .collect(Collectors.toList());
 
-        // 2. 네이버 데이터 가져오기 및 거리 재계산
+        // 2. 네이버 데이터
         List<ShopResponse> naver = naverShopService.searchButcherShops(lat, lng)
                 .stream()
                 .map(shop -> updateRealDistance(shop, lat, lng))
                 .filter(shop -> shop.getDistance() <= MAX_DISTANCE)
                 .collect(Collectors.toList());
 
-        // 3. 합치고 중복 제거 후 거리순 상위 5개 반환
+        // 3. 합치고 5개 제한
         return Stream.concat(kakao.stream(), naver.stream())
                 .collect(Collectors.collectingAndThen(
                         Collectors.toMap(
