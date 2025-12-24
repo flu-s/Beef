@@ -36,7 +36,7 @@ const getLinkInfo = (index: number) => {
 }
 
 const RecipeList: React.FC<Props> = ({ recipes, cut, meatType }) => {
-  // ✅ 핵심 로직: 서버 응답이 없어도 강제로 3개의 검색 버튼(네이버/유튜브/구글)을 생성
+  // ✅ 서버 데이터(recipes)가 비어있어도 [0, 1, 2] 인덱스를 사용해 3개 버튼 생성
   const displayItems = (recipes && recipes.length > 0) ? recipes : [0, 1, 2];
 
   if (!cut || cut === '판정 불가') return null;
@@ -55,8 +55,6 @@ const RecipeList: React.FC<Props> = ({ recipes, cut, meatType }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {displayItems.map((_, index) => {
           const info = getLinkInfo(index);
-          
-          // 검색어 스마트 조합 (예: "소고기 우둔살 레시피")
           const prefix = (cut.includes('닭') || cut.includes('소')) ? "" : (meatType === 'beef' ? '소고기 ' : '닭고기 ');
           const searchTerm = `${prefix}${cut} 레시피`;
 
