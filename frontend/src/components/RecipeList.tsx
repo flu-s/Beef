@@ -36,14 +36,13 @@ const getLinkInfo = (index: number) => {
 }
 
 const RecipeList: React.FC<Props> = ({ recipes, cut, meatType }) => {
-  // 핵심 변경 사항: 서버에서 recipes가 빈 배열로 와도 [0, 1, 2] 인덱스를 사용하여 3개의 버튼을 강제로 만듭니다.
+  // ✅ 핵심 로직: 서버 응답이 없어도 강제로 3개의 검색 버튼(네이버/유튜브/구글)을 생성
   const displayItems = (recipes && recipes.length > 0) ? recipes : [0, 1, 2];
 
-  // 판정 불가 상태일 때는 컴포넌트를 숨깁니다.
   if (!cut || cut === '판정 불가') return null;
 
   return (
-    <div className="bg-white rounded-3xl p-6 shadow-lg border border-stone-100">
+    <div className="bg-white rounded-3xl p-6 shadow-lg border border-stone-100 mt-6">
       <div className="flex items-center gap-2 mb-6">
         <div className="bg-red-100 p-2 rounded-full">
           <ChefHat className="h-6 w-6 text-red-600" />
@@ -57,7 +56,7 @@ const RecipeList: React.FC<Props> = ({ recipes, cut, meatType }) => {
         {displayItems.map((_, index) => {
           const info = getLinkInfo(index);
           
-          // 검색어 조합 로직
+          // 검색어 스마트 조합 (예: "소고기 우둔살 레시피")
           const prefix = (cut.includes('닭') || cut.includes('소')) ? "" : (meatType === 'beef' ? '소고기 ' : '닭고기 ');
           const searchTerm = `${prefix}${cut} 레시피`;
 
@@ -69,7 +68,7 @@ const RecipeList: React.FC<Props> = ({ recipes, cut, meatType }) => {
               rel="noopener noreferrer"
               className={`group block bg-stone-50 rounded-2xl overflow-hidden border border-stone-200 transition-all cursor-pointer ${
                 meatType === 'beef' ? 'hover:border-red-300' : 'hover:border-orange-300'
-              } hover:shadow-md`}
+              } hover:shadow-md shadow-sm`}
             >
               <div className={`h-32 relative overflow-hidden flex flex-col items-center justify-center ${info.color}`}>
                  <div className="flex items-center gap-2">
