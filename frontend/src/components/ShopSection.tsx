@@ -51,7 +51,7 @@ const ShopSection: React.FC = () => {
           <div className="bg-red-100 p-2 rounded-full text-red-600">
             <MapPin className="w-6 h-6" />
           </div>
-          <h3 className="text-xl font-extrabold text-stone-900">주변 정육점 추천</h3>
+          <h3 className="text-xl font-extrabold text-stone-900">내 주변 정육점</h3>
         </div>
         {status !== "loading" && (
           <button 
