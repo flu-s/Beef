@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPin, Star, Navigation } from "lucide-react"; // Phone 아이콘 제거
+import { Star, Navigation } from "lucide-react";
 import type { ButcherShop } from "../types";
 
 interface ShopListProps {
@@ -8,81 +8,65 @@ interface ShopListProps {
   onShopClick: (shop: ButcherShop) => void;
 }
 
-const ShopList: React.FC<ShopListProps> = ({
-  shops,
-  selectedShopId,
-  onShopClick,
-}) => {
-  // ✅ 프론트엔드에서도 안전하게 상위 5개만 표시하도록 제한
+const ShopList: React.FC<ShopListProps> = ({ shops, selectedShopId, onShopClick }) => {
+  // 상위 5개만 표시
   const displayedShops = shops.slice(0, 5);
 
   return (
-    <div className="bg-white rounded-3xl p-6 shadow-lg border border-stone-100">
-      {/* 헤더 */}
-      <div className="flex items-center gap-2 mb-6">
-        <div className="bg-blue-100 p-2 rounded-full">
-          <MapPin className="h-6 w-6 text-blue-600" />
-        </div>
-        <h3 className="text-xl font-bold text-stone-900">
-          내 주변 정육점
-        </h3>
-      </div>
-
-      {/* 리스트 */}
-      <div className="space-y-3">
-        {displayedShops.map((shop) => (
-          <div
-            key={shop.id}
-            onClick={() => onShopClick(shop)}
-            className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer
-              ${
-                shop.id === selectedShopId
-                  ? "border-blue-500 bg-blue-50 shadow"
-                  : "border-stone-100 hover:border-blue-200 hover:bg-blue-50/30"
-              }`}
-          >
-            {/* 정보 */}
-            <div className="flex-1 min-w-0"> {/* min-w-0은 텍스트 줄임표(...)를 위해 필요 */}
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-bold text-stone-900">{shop.name}</span>
-              </div>
-
-              <div className="flex items-center gap-2 text-xs text-stone-500">
-                <span className="flex items-center text-yellow-500">
-                  <Star className="h-3 w-3 fill-current mr-0.5" />
-                  {shop.rating}
-                </span>
-                <span>|</span>
-                <span>{shop.distance}m</span>
-                <span>|</span>
-                <span className="truncate block">
-                  {shop.address}
-                </span>
-              </div>
+    <div className="space-y-3">
+      <h4 className="text-sm font-bold text-stone-400 ml-1 uppercase tracking-wider">가까운 정육점 목록</h4>
+      {displayedShops.map((shop) => (
+        <div
+          key={shop.id}
+          onClick={() => onShopClick(shop)}
+          className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer group
+            ${
+              shop.id === selectedShopId
+                ? "border-blue-500 bg-blue-50/50 shadow-sm"
+                : "border-stone-100 bg-stone-50/30 hover:border-blue-200 hover:bg-blue-50/20"
+            }`}
+        >
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-bold text-stone-900 truncate">{shop.name}</span>
+              {shop.isOpen && (
+                <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-md font-bold">영업중</span>
+              )}
             </div>
 
-            {/* 액션 버튼: 전화번호 제거됨 */}
-            <div className="flex items-center ml-4">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const url = `https://map.naver.com/v5/search/${encodeURIComponent(
-                    shop.name
-                  )}?c=${shop.location.lng},${shop.location.lat},15,0,0,0,dh`;
-                  window.open(url, "_blank");
-                }}
-                className="p-2 bg-blue-600 rounded-full text-white hover:bg-blue-700 transition-colors shadow-sm"
-              >
-                <Navigation className="h-4 w-4" />
-              </button>
+            <div className="flex items-center gap-2 text-xs text-stone-500">
+              <span className="flex items-center text-yellow-500 font-bold">
+                <Star className="h-3 w-3 fill-current mr-0.5" />
+                {shop.rating}
+              </span>
+              <span className="text-stone-300">|</span>
+              <span className="font-medium text-stone-600">{shop.distance}m</span>
+              <span className="text-stone-300">|</span>
+              <span className="truncate">{shop.address}</span>
             </div>
           </div>
-        ))}
 
-        {displayedShops.length === 0 && (
-          <p className="text-center text-stone-400 py-10">주변에 정육점이 없습니다.</p>
-        )}
-      </div>
+          <div className="flex items-center ml-4">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const url = `https://map.naver.com/v5/search/${encodeURIComponent(shop.name)}?c=${shop.location.lng},${shop.location.lat},15,0,0,0,dh`;
+                window.open(url, "_blank");
+              }}
+              className="p-2.5 bg-white border border-stone-200 rounded-full text-blue-600 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all shadow-sm"
+              title="길찾기"
+            >
+              <Navigation className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {shops.length === 0 && (
+        <div className="text-center py-12 bg-stone-50 rounded-2xl border border-dashed border-stone-200">
+          <p className="text-stone-400 text-sm font-medium">현재 위치 주변에 정육점 정보가 없습니다.</p>
+        </div>
+      )}
     </div>
   );
 };
