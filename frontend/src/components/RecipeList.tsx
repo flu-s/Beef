@@ -1,61 +1,46 @@
 import React from 'react';
 import { ChefHat, Search, Youtube } from 'lucide-react';
-import type { Recipe } from '../types';
 
 interface Props {
-  recipes: Recipe[];
+  recipes: any[];
   cut: string;
   meatType: 'beef' | 'chicken';
 }
 
 const getLinkInfo = (index: number) => {
-    switch (index % 3) {
-        case 0:
-            return {
-                icon: <Search className="h-6 w-6" />,
-                name: '네이버',
-                color: 'text-green-600/70 bg-green-500/10',
-                searchUrl: 'https://search.naver.com/search.naver?query='
-            };
-        case 1:
-            return {
-                icon: <Youtube className="h-6 w-6" />,
-                name: '유튜브',
-                color: 'text-red-600/70 bg-red-500/10',
-                searchUrl: 'https://www.youtube.com/results?search_query='
-            };
-        case 2:
-            return {
-                icon: <Search className="h-6 w-6" />,
-                name: '구글',
-                color: 'text-blue-600/70 bg-blue-500/10',
-                searchUrl: 'https://www.google.com/search?q='
-            };
-        default:
-             return { icon: <Search className="h-6 w-6" />, name: '검색', color: 'text-stone-600/70 bg-stone-500/10', searchUrl: 'https://www.google.com/search?q=' };
-    }
+  switch (index % 3) {
+    case 0:
+      return {
+        icon: <Search className="h-6 w-6" />,
+        name: '네이버',
+        color: 'text-green-600/70 bg-green-500/10',
+        searchUrl: 'https://search.naver.com/search.naver?query='
+      };
+    case 1:
+      return {
+        icon: <Youtube className="h-6 w-6" />,
+        name: '유튜브',
+        color: 'text-red-600/70 bg-red-500/10',
+        searchUrl: 'https://www.youtube.com/results?search_query='
+      };
+    case 2:
+      return {
+        icon: <Search className="h-6 w-6" />,
+        name: '구글',
+        color: 'text-blue-600/70 bg-blue-500/10',
+        searchUrl: 'https://www.google.com/search?q='
+      };
+    default:
+      return { icon: <Search className="h-6 w-6" />, name: '검색', color: 'text-stone-600/70 bg-stone-500/10', searchUrl: 'https://www.google.com/search?q=' };
+  }
 }
 
 const RecipeList: React.FC<Props> = ({ recipes, cut, meatType }) => {
-  const safeRecipes = Array.isArray(recipes) ? recipes : [];
+  // 핵심 변경 사항: 서버에서 recipes가 빈 배열로 와도 [0, 1, 2] 인덱스를 사용하여 3개의 버튼을 강제로 만듭니다.
+  const displayItems = (recipes && recipes.length > 0) ? recipes : [0, 1, 2];
 
-  if (safeRecipes.length === 0) {
-    return (
-      <div className="bg-white rounded-3xl p-6 shadow-lg border border-stone-100">
-        <div className="flex items-center gap-2 mb-4">
-           <div className="bg-red-100 p-2 rounded-full">
-             <ChefHat className="h-6 w-6 text-red-600" />
-           </div>
-           <h3 className="text-xl font-bold text-stone-900">
-             <span className="text-red-600">{cut}</span> 추천 조리법
-           </h3>
-        </div>
-        <p className="text-stone-500 text-center py-4 bg-stone-50 rounded-xl">
-          현재 추천 가능한 조리법 정보를 불러올 수 없습니다.
-        </p>
-      </div>
-    );
-  }
+  // 판정 불가 상태일 때는 컴포넌트를 숨깁니다.
+  if (!cut || cut === '판정 불가') return null;
 
   return (
     <div className="bg-white rounded-3xl p-6 shadow-lg border border-stone-100">
@@ -69,11 +54,10 @@ const RecipeList: React.FC<Props> = ({ recipes, cut, meatType }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {safeRecipes.map((recipe, index) => {
+        {displayItems.map((_, index) => {
           const info = getLinkInfo(index);
-
-          // ⭐ 검색어 최적화 ⭐
-          // 이미 '닭다리'처럼 이름에 '닭'이나 '소'가 있으면 중복 방지
+          
+          // 검색어 조합 로직
           const prefix = (cut.includes('닭') || cut.includes('소')) ? "" : (meatType === 'beef' ? '소고기 ' : '닭고기 ');
           const searchTerm = `${prefix}${cut} 레시피`;
 
@@ -100,9 +84,7 @@ const RecipeList: React.FC<Props> = ({ recipes, cut, meatType }) => {
                 }`}>
                    {cut}
                 </h4>
-                <p className="text-sm text-stone-500 font-medium">
-                   레시피 검색
-                </p>
+                <p className="text-sm text-stone-500 font-medium">레시피 검색</p>
               </div>
             </a>
           );
