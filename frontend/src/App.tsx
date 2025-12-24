@@ -123,7 +123,7 @@ function BeefAnalysisApp() {
               <div className="absolute inset-0 animate-scan border-b-4 border-red-500"></div>
             </div>
             <p className="text-2xl font-bold animate-pulse text-stone-800">AI가 분석 중입니다...</p>
-            <p className="text-stone-500">서버가 처음 깨어나는 데 약 1분이 소요될 수 있습니다.</p>
+            <p className="text-stone-500">서버가 처음 깨어나는 데 약 5분정도 소요될 수 있습니다.</p>
           </div>
         )}
 
